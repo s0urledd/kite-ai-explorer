@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { Navbar } from "@/components/layout/navbar";
+import { Footer } from "@/components/layout/footer";
 
 export const metadata: Metadata = {
   title: "Kite Explorer — KiteAI Block Explorer",
@@ -15,10 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-kite-bg text-kite-text font-sans antialiased">
-        {/* TODO: Add Providers (RainbowKit, wagmi, ReactQuery) */}
-        {/* TODO: Add Navbar component */}
+        <Navbar />
         <main>{children}</main>
-        {/* TODO: Add Footer component */}
+        <Footer />
       </body>
     </html>
   );
