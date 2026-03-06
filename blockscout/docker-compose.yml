@@ -50,6 +50,13 @@ services:
     ports:
       - "8151:8050"
 
+  smart-contract-verifier:
+    image: ghcr.io/blockscout/smart-contract-verifier:latest
+    restart: unless-stopped
+    container_name: kite-explorer-sc-verifier
+    ports:
+      - "8150:8050"
+
   visualizer:
     image: ghcr.io/blockscout/visualizer:latest
     restart: unless-stopped
