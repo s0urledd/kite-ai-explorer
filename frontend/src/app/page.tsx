@@ -1,29 +1,38 @@
-/**
- * Dashboard — Main page
- *
- * Layout:
- * 1. Search bar (hero)
- * 2. Stat strip (block height, TPS, gas, addresses, net load)
- * 3. Latest Blocks + Latest Transactions (side by side)
- * 4. Transaction Activity chart + Gas Utilization chart
- * 5. Active Contracts leaderboard
- *
- * Data source: Blockscout v2 API via @/lib/api/blockscout
- */
+"use client";
 
-// TODO: Implement dashboard with real Blockscout data
-// See docs/ARCHITECTURE.md for API endpoints
-// See the prototype JSX in conversation history for design reference
+import { useChainData } from "@/lib/hooks/use-chain-data";
+import { SearchBar } from "@/components/layout/search-bar";
+import { StatStrip } from "@/components/dashboard/stat-strip";
+import { LatestBlocks } from "@/components/dashboard/latest-blocks";
+import { LatestTransactions } from "@/components/dashboard/latest-transactions";
+import { TxChart } from "@/components/dashboard/tx-chart";
+import { GasChart } from "@/components/dashboard/gas-chart";
+import { ActiveContracts } from "@/components/dashboard/active-contracts";
 
 export default function DashboardPage() {
+  const data = useChainData();
+
   return (
-    <div className="max-w-[1280px] mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold text-kite-text mb-4">
-        Kite Explorer
-      </h1>
-      <p className="text-kite-text-secondary">
-        Dashboard coming soon. Blockscout backend must be running.
-      </p>
+    <div>
+      <SearchBar />
+      <StatStrip data={data} />
+
+      <div className="max-w-[1280px] mx-auto px-6 py-5 flex flex-col gap-3.5">
+        {/* Latest Blocks & Transactions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <LatestBlocks blocks={data.blocks} />
+          <LatestTransactions blocks={data.blocks} />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <TxChart data={data.txHistory} />
+          <GasChart data={data.gasHistory} />
+        </div>
+
+        {/* Active Contracts */}
+        <ActiveContracts contracts={data.contracts} />
+      </div>
     </div>
   );
 }

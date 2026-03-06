@@ -32,15 +32,17 @@ export function weiToGwei(wei: string | number): string {
   return (num / 1e9).toFixed(2);
 }
 
-/** Relative time: "3s ago", "5m ago", "2h ago" */
+/** Relative time: "3s", "5m", "2h" */
 export function timeAgo(timestamp: string | number): string {
-  const ts = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp * 1000;
-  const diff = Math.floor((Date.now() - ts) / 1000);
+  const num = typeof timestamp === "string" ? Number(timestamp) : timestamp;
+  // If it looks like seconds (< 1e12), convert to ms; otherwise treat as ms
+  const ms = num < 1e12 ? num * 1000 : num;
+  const diff = Math.floor((Date.now() - ms) / 1000);
   if (diff < 3) return "just now";
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
 
 /** Gas usage percentage */

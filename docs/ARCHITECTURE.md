@@ -3,47 +3,72 @@
 ## Overview
 
 Custom block explorer for KiteAI Mainnet (Chain ID: 2366).
-Uses **Blockscout as the backend/indexer** and a **custom Next.js frontend** for premium UI/UX.
+
+**Blockscout is used ONLY as:**
+1. **Indexer** — crawls the chain via JSON-RPC, indexes blocks/txs/logs/tokens into Postgres
+2. **REST API** — serves indexed data via `/api/v2/*` endpoints
+3. **Contract Verification** — Solidity/Vyper source verification via smart-contract-verifier
+
+**Blockscout UI is completely disabled** (`DISABLE_WEBAPP=true`).
+All user-facing UI is our custom Next.js frontend.
 
 ## Stack
 
 ```
 ┌─────────────────────────────────────┐
-│         Custom Frontend             │
+│      Custom Frontend (100% ours)    │
 │   Next.js + TypeScript + Tailwind   │
 │   shadcn/ui + Recharts              │
 │         Port 3000                   │
+│   ALL pages, ALL UI, ALL UX         │
 └──────────────┬──────────────────────┘
-               │ REST API v2 / GraphQL
+               │ REST API v2
                ▼
 ┌─────────────────────────────────────┐
-│       Blockscout Backend            │
-│   Elixir Indexer + API Server       │
+│    Blockscout (headless, no UI)     │
 │         Port 4000                   │
-│   ┌───────────┐  ┌──────────────┐   │
-│   │  Indexer   │  │  REST API v2 │   │
-│   │  (blocks,  │  │  /api/v2/*   │   │
-│   │   txs,     │  ├──────────────┤   │
-│   │   logs,    │  │  GraphQL     │   │
-│   │   tokens)  │  │  /graphiql   │   │
-│   └─────┬─────┘  └──────────────┘   │
-│         │                           │
-│   ┌─────▼─────┐                     │
-│   │ PostgreSQL │                     │
-│   │  Port 7432 │                     │
-│   └───────────┘                     │
+│                                     │
+│   ┌────────────────────────────┐    │
+│   │  Indexer                   │    │
+│   │  blocks, txs, logs, tokens │    │
+│   │  internal txs, traces      │    │
+│   └─────────┬──────────────────┘    │
+│             │                       │
+│   ┌─────────▼──────────────────┐    │
+│   │  REST API v2 (/api/v2/*)   │    │
+│   │  Contract Verification     │    │
+│   │  Sig Provider              │    │
+│   │  Stats Service             │    │
+│   └────────────────────────────┘    │
+│             │                       │
+│   ┌─────────▼──────┐               │
+│   │   PostgreSQL   │               │
+│   │   Port 7432    │               │
+│   └────────────────┘               │
 └──────────────┬──────────────────────┘
                │ JSON-RPC (HTTP + WS)
                ▼
 ┌─────────────────────────────────────┐
 │     KiteAI Archive Node            │
-│   Avalanche Subnet-EVM (v0.8.0)    │
+│   Avalanche Subnet-EVM             │
 │   Chain ID: 2366 | Token: KITE     │
 │   HTTP RPC: Port 9650              │
 │   P2P: Port 9651                   │
 │   pruning-enabled: false           │
 └─────────────────────────────────────┘
 ```
+
+## Blockscout Role (headless backend only)
+
+Blockscout handles these backend concerns so we don't reinvent them:
+- **Chain indexing**: Continuously polls the archive node, parses blocks/txs/receipts/logs
+- **Data normalization**: Token detection (ERC-20/721/1155), internal tx tracing, address balancing
+- **REST API v2**: Paginated, typed JSON endpoints for all indexed data
+- **Contract verification**: Accepts Solidity/Vyper source, compiles & verifies on-chain bytecode
+- **Signature decoding**: Method ID → human-readable function name
+- **Stats aggregation**: Daily tx counts, gas usage charts
+
+Everything else — every pixel the user sees — is our frontend.
 
 ## Chain Details
 
@@ -64,9 +89,9 @@ Uses **Blockscout as the backend/indexer** and a **custom Next.js frontend** for
 ## Data Flow
 
 1. **Archive Node** syncs all KiteAI blocks with `pruning-enabled: false`
-2. **Blockscout Indexer** polls the node via JSON-RPC, indexes into Postgres
-3. **Blockscout API** serves indexed data via REST v2 + GraphQL
-4. **Custom Frontend** fetches from Blockscout API, renders premium UI
+2. **Blockscout Indexer** (headless) polls the node via JSON-RPC, indexes into Postgres
+3. **Blockscout REST API** serves indexed data — no UI, just JSON
+4. **Our Frontend** fetches from Blockscout API, renders everything
 
 ## Key Blockscout API Endpoints
 
