@@ -15,8 +15,8 @@
     --kite-bg: #09090B;
     --kite-surface: #111113;
     --kite-surface-hover: #19180F;
-    --kite-border: transparent;
-    --kite-border-light: transparent;
+    --kite-border: #111113;
+    --kite-border-light: #111113;
     --kite-text: #F5F0E8;
     --kite-text-secondary: #D8D3CB;
     --kite-text-muted: #5C574E;

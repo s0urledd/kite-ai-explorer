@@ -100,7 +100,7 @@ export function StatStrip({ data }: StatStripProps) {
             <div className="mb-3">{card.main}</div>
 
             {/* Sub rows */}
-            <div className="border-t border-dashed border-kite-border/40 pt-2.5 space-y-1.5">
+            <div className="pt-2.5 space-y-1.5">
               {card.rows.map((row) => (
                 <div key={row.label} className="flex items-center justify-between">
                   <span className="text-[11px] text-kite-text-muted">{row.label}</span>
