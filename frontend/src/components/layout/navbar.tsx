@@ -2,13 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { lazy, Suspense } from "react";
 import { KiteLogo } from "@/components/common/kite-logo";
 import { useKitePrice } from "@/lib/hooks/use-kite-price";
 import { useTheme } from "@/lib/hooks/use-theme";
-
-// Lazy-load wallet button to avoid pulling in RainbowKit/WalletConnect on initial load
-const LazyWalletButton = lazy(() => import("./wallet-button"));
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", match: ["/"] },
@@ -92,16 +88,7 @@ export function Navbar() {
             <span className="text-xs">Mainnet</span>
           </div>
 
-          {/* RainbowKit Connect Button - lazy loaded */}
-          <Suspense
-            fallback={
-              <button className="bg-kite-gold text-[#09090B] px-4 py-2 rounded-[10px] font-semibold text-[13px] opacity-70">
-                Connect Wallet
-              </button>
-            }
-          >
-            <LazyWalletButton />
-          </Suspense>
+          {/* Wallet connect - disabled for now */}
         </div>
       </div>
     </nav>
