@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { lazy, Suspense } from "react";
 import { KiteLogo } from "@/components/common/kite-logo";
 import { useKitePrice } from "@/lib/hooks/use-kite-price";
 import { useTheme } from "@/lib/hooks/use-theme";
+
+// Lazy-load wallet button to avoid pulling in RainbowKit/WalletConnect on initial load
+const LazyWalletButton = lazy(() => import("./wallet-button"));
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", match: ["/"] },
@@ -89,54 +92,16 @@ export function Navbar() {
             <span className="text-xs">Mainnet</span>
           </div>
 
-          {/* RainbowKit Connect Button */}
-          <ConnectButton.Custom>
-            {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
-              const connected = mounted && account && chain;
-              return (
-                <div
-                  {...(!mounted && {
-                    "aria-hidden": true,
-                    style: { opacity: 0, pointerEvents: "none" as const, userSelect: "none" as const },
-                  })}
-                >
-                  {!connected ? (
-                    <button
-                      onClick={openConnectModal}
-                      className="bg-kite-gold text-[#09090B] px-4 py-2 rounded-[10px] font-semibold text-[13px] hover:bg-kite-gold-light hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(196,169,106,0.2)] transition-all"
-                    >
-                      Connect Wallet
-                    </button>
-                  ) : chain?.unsupported ? (
-                    <button
-                      onClick={openChainModal}
-                      className="bg-red-500 text-white px-4 py-2 rounded-[10px] font-semibold text-[13px] hover:bg-red-600 transition-all"
-                    >
-                      Wrong Network
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={openChainModal}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-kite-border bg-kite-surface hover:border-kite-gold/20 transition-all"
-                      >
-                        {chain?.iconUrl && (
-                          <img src={chain.iconUrl} alt="" className="w-4 h-4 rounded-full" />
-                        )}
-                        <span className="text-xs font-medium text-kite-text">{chain?.name}</span>
-                      </button>
-                      <button
-                        onClick={openAccountModal}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-kite-gold text-[#09090B] font-semibold text-[13px] hover:bg-kite-gold-light transition-all"
-                      >
-                        {account.displayName}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            }}
-          </ConnectButton.Custom>
+          {/* RainbowKit Connect Button - lazy loaded */}
+          <Suspense
+            fallback={
+              <button className="bg-kite-gold text-[#09090B] px-4 py-2 rounded-[10px] font-semibold text-[13px] opacity-70">
+                Connect Wallet
+              </button>
+            }
+          >
+            <LazyWalletButton />
+          </Suspense>
         </div>
       </div>
     </nav>
