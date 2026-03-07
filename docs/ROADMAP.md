@@ -6,48 +6,58 @@
 - [x] Research KiteAI chain specifics
 - [x] Set up archive node (pruning-enabled: false)
 - [x] Create project scaffold
-- [ ] Deploy Blockscout backend pointing to KiteAI archive node
-- [ ] Verify indexing works (blocks, txs, logs, tokens)
-- [ ] Verify API responses from `/api/v2/stats`, `/api/v2/blocks`, etc.
+- [x] Deploy Blockscout backend pointing to KiteAI archive node
+- [x] Verify indexing works (blocks, txs, logs, tokens)
+- [x] Verify API responses from `/api/v2/stats`, `/api/v2/blocks`, etc.
 
 ## Sprint 2: Frontend Foundation (Week 2)
 
-- [ ] Initialize Next.js 14+ with TypeScript, Tailwind, shadcn/ui
-- [ ] Set up API adapter layer (typed clients for Blockscout REST v2)
-- [ ] Build layout: navbar, footer, search bar
-- [ ] Build Dashboard page:
-  - [ ] Chain overview stat strip (block height, TPS, gas, addresses)
-  - [ ] Latest Blocks panel
-  - [ ] Latest Transactions panel
-  - [ ] Transaction Activity chart (area chart)
-  - [ ] Gas Utilization chart
-  - [ ] Active Contracts leaderboard
-- [ ] Wallet connect (RainbowKit + wagmi + viem)
+- [x] Initialize Next.js 14+ with TypeScript, Tailwind, shadcn/ui
+- [x] Set up API adapter layer (typed clients for Blockscout REST v2)
+- [x] Build layout: navbar, footer, search bar
+- [x] Build Dashboard page:
+  - [x] Chain overview stat cards (block height, TPS, gas, addresses, KITE price, mcap, fdv)
+  - [x] Latest Blocks panel
+  - [x] Latest Transactions panel
+  - [x] Transaction Activity chart (area chart)
+  - [x] Gas Utilization chart
+  - [x] Active Contracts leaderboard
+- [x] Wallet connect (RainbowKit + wagmi + viem)
 
 ## Sprint 3: Core Pages (Week 3)
 
-- [ ] Blocks list page (paginated)
-- [ ] Block detail page (txs, gas, validator)
-- [ ] Transactions list page (paginated, filterable)
-- [ ] Transaction detail page:
-  - [ ] Overview tab
-  - [ ] Internal txs tab
-  - [ ] Logs tab
-  - [ ] State changes tab
-  - [ ] Raw trace tab
-- [ ] Search results page (universal search)
+- [x] Blocks list page (paginated)
+- [x] Block detail page (txs, gas, validator)
+- [x] Transactions list page (paginated, filterable)
+- [x] Transaction detail page:
+  - [x] Overview tab
+  - [x] Internal txs tab
+  - [x] Logs tab
+  - [x] State changes tab
+  - [x] Raw trace tab
+- [x] Search results page (universal search)
 
 ## Sprint 4: Address & Token Pages (Week 4)
 
-- [ ] Address detail page:
-  - [ ] Balance, tx count, token holdings
-  - [ ] Transaction history tab
-  - [ ] Token transfers tab
-  - [ ] Internal txs tab
-  - [ ] Contract code tab (if verified)
-- [ ] Token list page
-- [ ] Token detail page (holders, transfers)
-- [ ] Contract detail page (ABI, read/write, verification status)
+- [x] Address detail page:
+  - [x] Balance, tx count, token holdings
+  - [x] Transaction history tab
+  - [x] Token transfers tab
+  - [x] Internal txs tab
+  - [x] Contract code tab (ABI read/write methods)
+- [x] Token list page
+- [x] Token detail page (holders, transfers)
+- [x] Contract detail page (ABI, read/write, verification status)
+
+## Extra: UI & DX Enhancements (Done)
+
+- [x] DexScreener KITE price integration (live price, 24h change, mcap, fdv)
+- [x] Light / Dark theme toggle (CSS variable based, persisted to localStorage)
+- [x] Charts & Stats page (5 visualizations: daily tx, gas, TPS, network utilization pie, summary)
+- [x] Etherscan/Monad-inspired stat card layout on dashboard
+- [x] Full number formatting (no compact K/M/B)
+- [x] Improved empty states across all pages
+- [x] Contract page with RPC fallback for active contracts
 
 ## Sprint 5: KiteAI-Specific Features (Week 5-6)
 
@@ -60,7 +70,7 @@
 
 ## Sprint 6: Polish & Deploy (Week 6-7)
 
-- [ ] Loading/skeleton/error/empty states
+- [x] Loading/skeleton/error/empty states
 - [ ] Mobile responsive optimization
 - [ ] SEO: meta tags, OpenGraph, structured data
 - [ ] Performance: ISR, caching, pagination optimization

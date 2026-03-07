@@ -21,8 +21,8 @@ export default function TxDetailPage() {
       try {
         const [txData, logsData, intData] = await Promise.all([
           blockscout.getTransaction(hash),
-          blockscout.getTransactionLogs(hash).catch(() => ({ items: [] } as PaginatedResponse<TransactionLog>)),
-          blockscout.getTransactionInternalTxs(hash).catch(() => ({ items: [] } as PaginatedResponse<InternalTransaction>)),
+          blockscout.getTransactionLogs(hash).catch(() => ({ items: [], next_page_params: null } as PaginatedResponse<TransactionLog>)),
+          blockscout.getTransactionInternalTxs(hash).catch(() => ({ items: [], next_page_params: null } as PaginatedResponse<InternalTransaction>)),
         ]);
         setTx(txData);
         setLogs(logsData.items || []);

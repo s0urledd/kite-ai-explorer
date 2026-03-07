@@ -4,13 +4,17 @@ import type {
   Block,
   Transaction,
   Address,
+  AddressParam,
   Token,
+  TokenTransfer,
   SearchResult,
   PaginatedResponse,
   TransactionChartData,
   IndexingStatus,
   InternalTransaction,
   TransactionLog,
+  SmartContract,
+  ContractMethod,
 } from "@/lib/types/api";
 
 // ============================================
@@ -133,6 +137,36 @@ class BlockscoutClient {
 
   async getToken(hash: string): Promise<Token> {
     return this.fetch(`/tokens/${hash}`);
+  }
+
+  async getTokenTransfers(hash: string, params?: Record<string, string>): Promise<PaginatedResponse<TokenTransfer>> {
+    return this.fetch(`/tokens/${hash}/transfers`, params);
+  }
+
+  async getTokenHolders(hash: string, params?: Record<string, string>): Promise<PaginatedResponse<{ address: AddressParam; value: string }>> {
+    return this.fetch(`/tokens/${hash}/holders`, params);
+  }
+
+  async getTokenCounters(hash: string): Promise<{ token_holders_count: string; transfers_count: string }> {
+    return this.fetch(`/tokens/${hash}/counters`);
+  }
+
+  // --- Smart Contracts ---
+  async getSmartContracts(params?: Record<string, string>): Promise<PaginatedResponse<SmartContract>> {
+    return this.fetch("/smart-contracts", params);
+  }
+
+  async getSmartContract(hash: string): Promise<SmartContract> {
+    return this.fetch(`/smart-contracts/${hash}`);
+  }
+
+  async getSmartContractMethods(hash: string, kind: "read" | "write"): Promise<ContractMethod[]> {
+    return this.fetch(`/smart-contracts/${hash}/methods-${kind}`);
+  }
+
+  // --- Charts ---
+  async getMarketChart(): Promise<{ chart_data: Array<{ date: string; closing_price: string; market_cap: string }> }> {
+    return this.fetch("/stats/charts/market");
   }
 
   // --- Search ---

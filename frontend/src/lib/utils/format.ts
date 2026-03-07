@@ -4,25 +4,22 @@ export function shortenHash(hash: string, chars = 6): string {
   return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`;
 }
 
-/** Format large numbers: 1,234,567 or 1.23M */
-export function formatNumber(n: number | string, compact = false): string {
+/** Format large numbers: always full with commas (1,234,567) */
+export function formatNumber(n: number | string | null | undefined, _compact = false): string {
+  if (n === null || n === undefined) return "0";
   const num = typeof n === "string" ? parseFloat(n) : n;
   if (isNaN(num)) return "0";
-  if (compact) {
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
-  }
   return num.toLocaleString();
 }
 
 /** Wei to KITE (18 decimals) */
-export function weiToKite(wei: string | bigint, decimals = 4): string {
-  const value = typeof wei === "string" ? BigInt(wei) : wei;
+export function weiToKite(wei: string | bigint | null | undefined, decimals = 4): string {
+  if (!wei) return "0";
+  const value = typeof wei === "string" ? BigInt(wei || "0") : wei;
   const whole = value / BigInt(1e18);
   const frac = value % BigInt(1e18);
   const fracStr = frac.toString().padStart(18, "0").slice(0, decimals);
-  if (whole === 0n && frac === 0n) return "0";
+  if (whole === BigInt(0) && frac === BigInt(0)) return "0";
   return `${whole}.${fracStr}`.replace(/\.?0+$/, "") || "0";
 }
 
