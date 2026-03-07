@@ -29,7 +29,7 @@ export function WalletModal({ onClose }: { onClose: () => void }) {
         {WALLETS.map((w) => (
           <button
             key={w}
-            className="flex justify-between items-center w-full px-4 py-3 bg-transparent border border-kite-border rounded-xl text-kite-text mb-1.5 hover:bg-kite-border hover:border-kite-gold/25 transition-all"
+            className="flex justify-between items-center w-full px-4 py-3 bg-transparent border border-kite-border rounded-xl text-kite-text mb-1.5 hover:bg-kite-bg hover:border-kite-gold/25 transition-all"
           >
             <span className="text-sm">{w}</span>
             <span className="text-xs text-kite-text-muted">→</span>

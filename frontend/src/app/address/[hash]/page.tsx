@@ -185,102 +185,70 @@ export default function AddressPage() {
         </div>
       </div>
 
-      {/* Balance & Stats Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        {/* KITE Balance Card */}
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-                <circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10l4-4 4 4"/>
-              </svg>
-            </div>
-            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">KITE Balance</span>
+      {/* Overview - compact key-value rows */}
+      <div className="bg-kite-surface rounded-[14px] mb-5 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2">
+          <div className="px-5 py-3 flex items-center gap-3">
+            <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Balance:</span>
+            <span className="text-[14px] font-mono font-semibold text-kite-text">{kiteBalance} KITE</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-kite-text mb-1">{kiteBalance}</div>
-          <div className="text-xs text-kite-text-muted">KITE</div>
-        </div>
-
-        {/* Activity Stats Card */}
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-            </div>
-            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">Activity</span>
+          <div className="px-5 py-3 flex items-center gap-3">
+            <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Transactions:</span>
+            <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.transactions_count || "0")}</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.transactions_count || "0")}</div>
-              <div className="text-[11px] text-kite-text-muted">Transactions</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.token_transfers_count || "0")}</div>
-              <div className="text-[11px] text-kite-text-muted">Token Transfers</div>
-            </div>
+          <div className="px-5 py-3 flex items-center gap-3">
+            <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Transfers:</span>
+            <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.token_transfers_count || "0")}</span>
           </div>
-        </div>
-
-        {/* Gas & Info Card */}
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-              </svg>
-            </div>
-            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">Gas Used</span>
+          <div className="px-5 py-3 flex items-center gap-3">
+            <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Gas Used:</span>
+            <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.gas_usage_count || "0", true)}</span>
           </div>
-          <div className="text-2xl font-bold font-mono text-kite-text mb-1">{formatNumber(counters.gas_usage_count || "0", true)}</div>
-          <div className="text-xs text-kite-text-muted">Total gas consumed</div>
         </div>
       </div>
 
-      {/* Token Holdings */}
-      {tokenBalances.length > 0 && (
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              </svg>
-              <h3 className="text-sm font-semibold text-kite-text">Token Holdings</h3>
-            </div>
-            <span className="text-[11px] text-kite-text-muted bg-kite-border/50 px-2 py-0.5 rounded font-mono">{tokenBalances.length} tokens</span>
-          </div>
+      {/* Token Holdings - always visible */}
+      <div className="bg-kite-surface rounded-[14px] mb-5 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3">
+          <h3 className="text-sm font-semibold text-kite-text">Token Holdings</h3>
+          <span className="text-[11px] text-kite-text-muted bg-kite-bg px-2 py-0.5 rounded font-mono">{tokenBalances.length} tokens</span>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        {tokenBalances.length === 0 ? (
+          <div className="px-5 py-6 text-center">
+            <div className="text-kite-text-muted text-sm">No token holdings found for this address.</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 px-5 pb-4">
             {tokenBalances.map((tb) => (
               <Link
                 key={tb.token.address}
                 href={`/address/${tb.token.address}`}
-                className="flex items-center gap-3 p-3 rounded-[10px] bg-kite-bg border border-kite-border hover:border-kite-gold/20 hover:bg-kite-surface-hover transition-all group"
+                className="flex items-center gap-2.5 p-2.5 rounded-[10px] bg-kite-bg hover:bg-kite-surface-hover transition-all group"
               >
-                <div className="w-8 h-8 rounded-full bg-kite-gold-faint border border-kite-border flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-7 h-7 rounded-full bg-kite-gold-faint flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {tb.token.icon_url ? (
-                    <img src={tb.token.icon_url} alt="" className="w-8 h-8 rounded-full" />
+                    <img src={tb.token.icon_url} alt="" className="w-7 h-7 rounded-full" />
                   ) : (
-                    <span className="text-[11px] font-bold text-kite-gold">{(tb.token.symbol || "?").slice(0, 2)}</span>
+                    <span className="text-[10px] font-bold text-kite-gold">{(tb.token.symbol || "?").slice(0, 2)}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-kite-text group-hover:text-kite-gold transition-colors truncate">
+                  <div className="text-[12px] font-medium text-kite-text group-hover:text-kite-gold transition-colors truncate">
                     {tb.token.name || "Unknown Token"}
                   </div>
                   <div className="text-[11px] text-kite-text-muted truncate">
                     {formatTokenBalance(tb.value, tb.token.decimals)} {tb.token.symbol}
                   </div>
                 </div>
-                <span className="text-[10px] text-kite-text-muted bg-kite-border/50 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                <span className="text-[9px] text-kite-text-muted bg-kite-bg px-1.5 py-0.5 rounded font-medium flex-shrink-0">
                   {tb.token.type}
                 </span>
               </Link>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>}
 
       {/* Extra contract info */}
       {isContract && (address.creation_tx_hash || address.creator_address_hash) && (
@@ -321,7 +289,7 @@ export default function AddressPage() {
           >
             {tab.label}
             {tab.count && tab.count !== "0" && (
-              <span className={`text-[10px] px-1.5 py-px rounded-full ${activeTab === tab.id ? "bg-kite-gold/15 text-kite-gold" : "bg-kite-border text-kite-text-muted"}`}>
+              <span className={`text-[10px] px-1.5 py-px rounded-full ${activeTab === tab.id ? "bg-kite-gold/15 text-kite-gold" : "bg-kite-bg text-kite-text-muted"}`}>
                 {formatNumber(tab.count, true)}
               </span>
             )}
