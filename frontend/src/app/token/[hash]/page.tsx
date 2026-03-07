@@ -175,7 +175,7 @@ export default function TokenDetailPage() {
           >
             {tab.label}
             {tab.count && tab.count !== "0" && (
-              <span className={`text-[10px] px-1.5 py-px rounded-full ${activeTab === tab.id ? "bg-kite-gold/15 text-kite-gold" : "bg-kite-border text-kite-text-muted"}`}>
+              <span className={`text-[10px] px-1.5 py-px rounded-full ${activeTab === tab.id ? "bg-kite-gold/15 text-kite-gold" : "bg-kite-bg text-kite-text-muted"}`}>
                 {formatNumber(tab.count)}
               </span>
             )}

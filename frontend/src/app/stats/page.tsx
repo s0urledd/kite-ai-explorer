@@ -363,7 +363,7 @@ export default function StatsPage() {
               </svg>
               <span className="text-sm font-semibold text-kite-text">Most Active Contracts (Recent Blocks)</span>
             </div>
-            <span className="text-[11px] text-kite-text-muted bg-kite-border/50 px-2 py-0.5 rounded font-mono">
+            <span className="text-[11px] text-kite-text-muted bg-kite-bg px-2 py-0.5 rounded font-mono">
               {chainData.contracts.length} tracked
             </span>
           </div>

@@ -287,13 +287,13 @@ export default function ContractsPage() {
           <div className="animate-pulse space-y-0">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-transparent">
-                <div className="w-7 h-7 rounded-lg bg-kite-border" />
+                <div className="w-7 h-7 rounded-lg bg-kite-bg" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-kite-border rounded w-48" />
-                  <div className="h-2.5 bg-kite-border/60 rounded w-32" />
+                  <div className="h-3 bg-kite-bg rounded w-48" />
+                  <div className="h-2.5 bg-kite-bg rounded w-32" />
                 </div>
-                <div className="h-3 bg-kite-border rounded w-16" />
-                <div className="h-3 bg-kite-border rounded w-12" />
+                <div className="h-3 bg-kite-bg rounded w-16" />
+                <div className="h-3 bg-kite-bg rounded w-12" />
               </div>
             ))}
           </div>
