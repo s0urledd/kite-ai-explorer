@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { hex, type RpcBlock } from "@/lib/api/rpc";
 import { shortenHash, timeAgo } from "@/lib/utils/format";
 
@@ -12,9 +13,9 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
     <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-kite-border/30">
         <span className="text-sm font-semibold text-kite-text">Latest Blocks</span>
-        <button className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors">
+        <Link href="/blocks" className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors">
           View all →
-        </button>
+        </Link>
       </div>
 
       <div className="max-h-[420px] overflow-y-auto">
