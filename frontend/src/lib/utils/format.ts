@@ -4,16 +4,11 @@ export function shortenHash(hash: string, chars = 6): string {
   return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`;
 }
 
-/** Format large numbers: 1,234,567 or 1.23M */
-export function formatNumber(n: number | string | null | undefined, compact = false): string {
+/** Format large numbers: always full with commas (1,234,567) */
+export function formatNumber(n: number | string | null | undefined, _compact = false): string {
   if (n === null || n === undefined) return "0";
   const num = typeof n === "string" ? parseFloat(n) : n;
   if (isNaN(num)) return "0";
-  if (compact) {
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + "K";
-  }
   return num.toLocaleString();
 }
 
