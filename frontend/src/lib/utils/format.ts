@@ -24,7 +24,7 @@ export function weiToKite(wei: string | bigint | null | undefined, decimals = 4)
   const whole = value / BigInt(1e18);
   const frac = value % BigInt(1e18);
   const fracStr = frac.toString().padStart(18, "0").slice(0, decimals);
-  if (whole === 0n && frac === 0n) return "0";
+  if (whole === BigInt(0) && frac === BigInt(0)) return "0";
   return `${whole}.${fracStr}`.replace(/\.?0+$/, "") || "0";
 }
 
