@@ -210,6 +210,19 @@ export interface DecodedLog {
   parameters: DecodedParam[];
 }
 
+/** GET /api/v2/smart-contracts */
+export interface SmartContract {
+  address: AddressParam;
+  coin_balance: string;
+  compiler_version: string | null;
+  language: string | null;
+  has_constructor_args: boolean;
+  optimization_enabled: boolean | null;
+  tx_count: number | null;
+  verified_at: string | null;
+  market_cap: string | null;
+}
+
 /** Paginated response wrapper */
 export interface PaginatedResponse<T> {
   items: T[];

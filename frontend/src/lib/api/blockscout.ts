@@ -11,6 +11,7 @@ import type {
   IndexingStatus,
   InternalTransaction,
   TransactionLog,
+  SmartContract,
 } from "@/lib/types/api";
 
 // ============================================
@@ -133,6 +134,20 @@ class BlockscoutClient {
 
   async getToken(hash: string): Promise<Token> {
     return this.fetch(`/tokens/${hash}`);
+  }
+
+  // --- Smart Contracts ---
+  async getSmartContracts(params?: Record<string, string>): Promise<PaginatedResponse<SmartContract>> {
+    return this.fetch("/smart-contracts", params);
+  }
+
+  async getSmartContract(hash: string): Promise<SmartContract> {
+    return this.fetch(`/smart-contracts/${hash}`);
+  }
+
+  // --- Charts ---
+  async getMarketChart(): Promise<{ chart_data: Array<{ date: string; closing_price: string; market_cap: string }> }> {
+    return this.fetch("/stats/charts/market");
   }
 
   // --- Search ---

@@ -7,12 +7,12 @@ import { KiteLogo } from "@/components/common/kite-logo";
 import { WalletModal } from "@/components/layout/wallet-modal";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Home" },
-  { href: "/blocks", label: "Blockchain" },
-  { href: "/tokens", label: "Tokens" },
-  { href: "/contracts", label: "Contracts" },
-  { href: "/stats", label: "Charts & Stats" },
-  { href: "/api-docs", label: "API" },
+  { href: "/", label: "Home", match: ["/"] },
+  { href: "/blocks", label: "Blockchain", match: ["/blocks", "/block/", "/txs", "/tx/"] },
+  { href: "/tokens", label: "Tokens", match: ["/tokens"] },
+  { href: "/contracts", label: "Contracts", match: ["/contracts"] },
+  { href: "/stats", label: "Charts & Stats", match: ["/stats"] },
+  { href: "/api-docs", label: "API", match: ["/api-docs"] },
 ];
 
 export function Navbar() {
@@ -29,7 +29,7 @@ export function Navbar() {
             <span className="text-lg font-bold text-kite-text tracking-wide">Kite</span>
             <div className="flex gap-0.5 ml-4">
               {NAV_ITEMS.map((item) => {
-                const active = pathname === item.href;
+                const active = item.match.some((m) => m === "/" ? pathname === "/" : pathname.startsWith(m));
                 return (
                   <Link
                     key={item.href}
