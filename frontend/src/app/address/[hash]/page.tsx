@@ -7,6 +7,18 @@ import { blockscout } from "@/lib/api/blockscout";
 import type { Address, Transaction, PaginatedResponse } from "@/lib/types/api";
 import { weiToKite, shortenHash, txStatusLabel, txStatusColor, formatNumber } from "@/lib/utils/format";
 
+interface TokenBalance {
+  token: {
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: string;
+    type: string;
+    icon_url: string | null;
+  };
+  value: string;
+}
+
 function CopyButton({ text, size = 13 }: { text: string; size?: number }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -39,6 +51,16 @@ function relativeTime(ts: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function formatTokenBalance(value: string, decimals: string): string {
+  const dec = parseInt(decimals) || 18;
+  const num = parseFloat(value) / Math.pow(10, dec);
+  if (num === 0) return "0";
+  if (num < 0.0001) return "<0.0001";
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+  return num.toFixed(4).replace(/\.?0+$/, "");
+}
+
 type Tab = "transactions" | "internal" | "tokens" | "contract";
 
 export default function AddressPage() {
@@ -46,6 +68,7 @@ export default function AddressPage() {
   const [address, setAddress] = useState<Address | null>(null);
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [counters, setCounters] = useState<Record<string, string>>({});
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("transactions");
   const [nextTxParams, setNextTxParams] = useState<Record<string, string> | null>(null);
@@ -55,15 +78,17 @@ export default function AddressPage() {
     if (!hash) return;
     (async () => {
       try {
-        const [addr, txData, ctr] = await Promise.all([
+        const [addr, txData, ctr, tokens] = await Promise.all([
           blockscout.getAddress(hash),
           blockscout.getAddressTransactions(hash),
           blockscout.getAddressCounters(hash).catch(() => ({})),
+          blockscout.getAddressTokenBalances(hash).catch(() => []),
         ]);
         setAddress(addr);
         setTxs(txData.items || []);
         setNextTxParams(txData.next_page_params);
         setCounters(ctr);
+        setTokenBalances(tokens as TokenBalance[]);
       } catch (e) {
         console.error("Failed to load address", e);
       } finally {
@@ -101,6 +126,7 @@ export default function AddressPage() {
   if (!address) return <div className="max-w-[1280px] mx-auto px-6 py-10 text-red-400">Address not found</div>;
 
   const isContract = address.is_contract;
+  const kiteBalance = weiToKite(address.coin_balance || "0");
 
   const tabs: { id: Tab; label: string; count?: string }[] = [
     { id: "transactions", label: "Transactions", count: counters.transactions_count },
@@ -114,7 +140,6 @@ export default function AddressPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
-          {/* Icon */}
           <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 ${isContract ? "bg-purple-500/10 border border-purple-500/20" : "bg-kite-gold-faint border border-kite-gold/15"}`}>
             {isContract ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
@@ -147,32 +172,108 @@ export default function AddressPage() {
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-5">
-        <h2 className="text-xs font-semibold text-kite-text-muted uppercase tracking-wider mb-4">Overview</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          <div>
-            <div className="text-[11px] text-kite-text-muted uppercase tracking-wider mb-1.5">KITE Balance</div>
-            <div className="text-lg font-bold font-mono text-kite-text">{weiToKite(address.coin_balance || "0")}</div>
-            <div className="text-[11px] text-kite-text-muted mt-0.5">KITE</div>
+      {/* Balance & Stats Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        {/* KITE Balance Card */}
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-full bg-kite-gold-faint border border-kite-gold/15 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10l4-4 4 4"/>
+              </svg>
+            </div>
+            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">KITE Balance</span>
           </div>
-          <div>
-            <div className="text-[11px] text-kite-text-muted uppercase tracking-wider mb-1.5">Transactions</div>
-            <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.transactions_count || "0")}</div>
+          <div className="text-2xl font-bold font-mono text-kite-text mb-1">{kiteBalance}</div>
+          <div className="text-xs text-kite-text-muted">KITE</div>
+        </div>
+
+        {/* Activity Stats Card */}
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-blue-400">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">Activity</span>
           </div>
-          <div>
-            <div className="text-[11px] text-kite-text-muted uppercase tracking-wider mb-1.5">Gas Used</div>
-            <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.gas_usage_count || "0")}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-kite-text-muted uppercase tracking-wider mb-1.5">Token Transfers</div>
-            <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.token_transfers_count || "0")}</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.transactions_count || "0")}</div>
+              <div className="text-[11px] text-kite-text-muted">Transactions</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold font-mono text-kite-text">{formatNumber(counters.token_transfers_count || "0")}</div>
+              <div className="text-[11px] text-kite-text-muted">Token Transfers</div>
+            </div>
           </div>
         </div>
 
-        {/* Extra contract info */}
-        {isContract && (address.creation_tx_hash || address.creator_address_hash) && (
-          <div className="mt-4 pt-4 border-t border-kite-border/30 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Gas & Info Card */}
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-orange-400">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <span className="text-[11px] text-kite-text-muted uppercase tracking-wider font-semibold">Gas Used</span>
+          </div>
+          <div className="text-2xl font-bold font-mono text-kite-text mb-1">{formatNumber(counters.gas_usage_count || "0", true)}</div>
+          <div className="text-xs text-kite-text-muted">Total gas consumed</div>
+        </div>
+      </div>
+
+      {/* Token Holdings */}
+      {tokenBalances.length > 0 && (
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+                <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              <h3 className="text-sm font-semibold text-kite-text">Token Holdings</h3>
+            </div>
+            <span className="text-[11px] text-kite-text-muted bg-kite-border/50 px-2 py-0.5 rounded font-mono">{tokenBalances.length} tokens</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {tokenBalances.map((tb) => (
+              <Link
+                key={tb.token.address}
+                href={`/address/${tb.token.address}`}
+                className="flex items-center gap-3 p-3 rounded-[10px] bg-kite-bg border border-kite-border hover:border-kite-gold/20 hover:bg-kite-surface-hover transition-all group"
+              >
+                <div className="w-8 h-8 rounded-full bg-kite-gold-faint border border-kite-border flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {tb.token.icon_url ? (
+                    <img src={tb.token.icon_url} alt="" className="w-8 h-8 rounded-full" />
+                  ) : (
+                    <span className="text-[11px] font-bold text-kite-gold">{(tb.token.symbol || "?").slice(0, 2)}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-kite-text group-hover:text-kite-gold transition-colors truncate">
+                    {tb.token.name || "Unknown Token"}
+                  </div>
+                  <div className="text-[11px] text-kite-text-muted truncate">
+                    {formatTokenBalance(tb.value, tb.token.decimals)} {tb.token.symbol}
+                  </div>
+                </div>
+                <span className="text-[10px] text-kite-text-muted bg-kite-border/50 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                  {tb.token.type}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Extra contract info */}
+      {isContract && (address.creation_tx_hash || address.creator_address_hash) && (
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-5">
+          <h3 className="text-xs font-semibold text-kite-text-muted uppercase tracking-wider mb-3">Contract Details</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {address.creator_address_hash && (
               <div>
                 <div className="text-[11px] text-kite-text-muted uppercase tracking-wider mb-1">Creator</div>
@@ -190,8 +291,8 @@ export default function AddressPage() {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-kite-surface rounded-[10px] border border-kite-border p-1 w-fit">
@@ -215,10 +316,9 @@ export default function AddressPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content: Transactions */}
       {activeTab === "transactions" && (
         <>
-          {/* Count bar */}
           <div className="bg-kite-surface rounded-t-[14px] border border-kite-border px-5 py-3">
             <span className="text-sm text-kite-text">
               <span className="font-bold">{formatNumber(counters.transactions_count || txs.length.toString())}</span>
@@ -227,7 +327,6 @@ export default function AddressPage() {
           </div>
 
           <div className="bg-kite-surface rounded-b-[14px] border border-t-0 border-kite-border overflow-hidden">
-            {/* Header */}
             <div className="grid grid-cols-[1fr_80px_60px_140px_100px_80px_90px] gap-3 px-5 py-3.5 border-b border-kite-border text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider">
               <span>Tx Hash</span>
               <span>Method</span>
@@ -239,37 +338,35 @@ export default function AddressPage() {
             </div>
 
             {txs.length === 0 && (
-              <div className="px-5 py-10 text-center text-kite-text-muted text-sm">No transactions found</div>
+              <div className="px-5 py-12 text-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-kite-text-muted/40 mx-auto mb-3">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <div className="text-kite-text-secondary text-sm mb-1">No transactions yet</div>
+                <div className="text-kite-text-muted text-xs">This address has not sent or received any transactions.</div>
+              </div>
             )}
 
             {txs.map((tx) => {
               const isIncoming = tx.to?.hash?.toLowerCase() === hash.toLowerCase();
               const method = tx.method || tx.decoded_input?.method_call?.split("(")[0] || "Transfer";
-
               return (
                 <div
                   key={tx.hash}
                   className="grid grid-cols-[1fr_80px_60px_140px_100px_80px_90px] gap-3 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center"
                 >
-                  {/* Tx Hash */}
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Link href={`/tx/${tx.hash}`} className="text-[13px] font-mono text-kite-gold hover:underline truncate">
                       {shortenHash(tx.hash, 8)}
                     </Link>
                     <CopyButton text={tx.hash} size={11} />
                   </div>
-
-                  {/* Method */}
                   <span className="text-[10px] font-medium text-kite-text-secondary bg-kite-bg border border-kite-border rounded px-1.5 py-0.5 truncate text-center">
-                    {method.length > 12 ? method.slice(0, 12) + "…" : method}
+                    {method.length > 12 ? method.slice(0, 12) + "\u2026" : method}
                   </span>
-
-                  {/* Block */}
                   <Link href={`/block/${tx.block}`} className="text-[13px] font-mono text-kite-text-secondary hover:text-kite-gold">
                     {tx.block}
                   </Link>
-
-                  {/* From/To */}
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`inline-flex items-center justify-center w-7 h-5 rounded text-[9px] font-bold flex-shrink-0 ${
                       isIncoming ? "bg-green-400/10 text-green-400 border border-green-400/20" : "bg-orange-400/10 text-orange-400 border border-orange-400/20"
@@ -283,18 +380,12 @@ export default function AddressPage() {
                       {shortenHash(isIncoming ? tx.from?.hash || "" : tx.to?.hash || "", 5)}
                     </Link>
                   </div>
-
-                  {/* Value */}
                   <span className="text-[13px] font-mono text-kite-text">
                     {(parseFloat(tx.value) / 1e18).toFixed(4)}
                   </span>
-
-                  {/* Status */}
                   <span className={`text-[11px] font-semibold ${txStatusColor(tx.status)}`}>
                     {txStatusLabel(tx.status)}
                   </span>
-
-                  {/* Age */}
                   <span className="text-[12px] text-kite-text-muted">{relativeTime(tx.timestamp)}</span>
                 </div>
               );
@@ -315,18 +406,33 @@ export default function AddressPage() {
         </>
       )}
 
+      {/* Tab Content: Internal Transactions */}
       {activeTab === "internal" && (
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-8 text-center">
-          <div className="text-kite-text-muted text-sm">Internal transactions will appear here once indexed.</div>
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-10 text-center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-kite-text-muted/40 mx-auto mb-3">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/>
+          </svg>
+          <div className="text-kite-text-secondary text-sm font-medium mb-1.5">No internal transactions</div>
+          <div className="text-kite-text-muted text-xs max-w-xs mx-auto">
+            Internal transactions (message calls between contracts) for this address have not been detected. They will appear here if this address interacts with other contracts internally.
+          </div>
         </div>
       )}
 
+      {/* Tab Content: Token Transfers */}
       {activeTab === "tokens" && (
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-8 text-center">
-          <div className="text-kite-text-muted text-sm">Token transfers will appear here once indexed.</div>
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-10 text-center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-kite-text-muted/40 mx-auto mb-3">
+            <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <div className="text-kite-text-secondary text-sm font-medium mb-1.5">No token transfers</div>
+          <div className="text-kite-text-muted text-xs max-w-xs mx-auto">
+            This address has no ERC-20, ERC-721, or ERC-1155 token transfer activity. Token transfers will show here once this address sends or receives tokens.
+          </div>
         </div>
       )}
 
+      {/* Tab Content: Contract Info */}
       {activeTab === "contract" && (
         <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
           <h3 className="text-sm font-semibold text-kite-text mb-4">Contract Information</h3>

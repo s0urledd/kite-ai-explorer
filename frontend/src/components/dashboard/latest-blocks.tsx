@@ -11,14 +11,14 @@ interface LatestBlocksProps {
 export function LatestBlocks({ blocks }: LatestBlocksProps) {
   return (
     <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-kite-border/30">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-kite-border/30">
         <span className="text-sm font-semibold text-kite-text">Latest Blocks</span>
         <Link href="/blocks" className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors">
-          View all →
+          View all &rarr;
         </Link>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto">
+      <div className="max-h-[420px] overflow-y-auto divide-y divide-kite-border/15">
         {blocks.map((b) => {
           const n = hex(b.number);
           const tc = Array.isArray(b.transactions) ? b.transactions.length : 0;
@@ -28,37 +28,47 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
           const pct = gl > 0 ? ((gu / gl) * 100).toFixed(0) : "0";
 
           return (
-            <div
+            <Link
               key={n}
-              className="flex items-start gap-3 px-4 py-2.5 border-b border-kite-border/20 cursor-pointer hover:bg-[#15140E] transition-colors"
+              href={`/block/${n}`}
+              className="flex items-center gap-3.5 px-5 py-3 hover:bg-kite-surface-hover transition-colors group"
             >
-              <div className="flex-shrink-0 min-w-[90px]">
-                <span className="text-[13px] font-mono font-bold text-kite-gold">
-                  {n.toLocaleString()}
-                </span>
+              {/* Block icon */}
+              <div className="flex-shrink-0 w-9 h-9 rounded-[10px] bg-kite-gold-faint border border-kite-border flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                </svg>
               </div>
 
+              {/* Block info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-xs text-kite-text-secondary">{tc} txns</span>
-                  <span className="text-kite-text-muted mx-0.5">·</span>
-                  <span className="text-xs text-kite-text-muted">{pct}% gas</span>
-                </div>
-                <div className="text-[11px] text-kite-text-muted">
-                  Validator{" "}
-                  <span className="text-kite-text-secondary font-mono">
-                    {shortenHash(b.miner, 4)}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[13px] font-mono font-bold text-kite-gold group-hover:text-kite-gold-light transition-colors">
+                    {n.toLocaleString()}
                   </span>
                 </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-kite-text-muted">
+                  <span>{tc} txns</span>
+                  <span className="text-kite-text-muted/50">&middot;</span>
+                  <span>{pct}% gas</span>
+                  <span className="text-kite-text-muted/50">&middot;</span>
+                  <span className="font-mono text-kite-text-secondary">{shortenHash(b.miner, 4)}</span>
+                </div>
               </div>
 
+              {/* Time */}
               <div className="text-right flex-shrink-0">
-                <div className="text-[13px] font-semibold font-mono text-kite-text">0 KITE</div>
                 <div className="text-[11px] text-kite-text-muted">{timeAgo(ts.toString())} ago</div>
               </div>
-            </div>
+            </Link>
           );
         })}
+
+        {blocks.length === 0 && (
+          <div className="px-5 py-10 text-center text-kite-text-muted text-sm">
+            Waiting for blocks...
+          </div>
+        )}
       </div>
     </div>
   );

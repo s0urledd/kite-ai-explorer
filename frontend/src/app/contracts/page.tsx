@@ -5,6 +5,7 @@ import Link from "next/link";
 import { blockscout } from "@/lib/api/blockscout";
 import type { SmartContract, PaginatedResponse } from "@/lib/types/api";
 import { shortenHash, formatNumber } from "@/lib/utils/format";
+import { useChainData } from "@/lib/hooks/use-chain-data";
 
 const CONTRACT_TABS = [
   { id: "all", label: "All Contracts" },
@@ -49,6 +50,7 @@ export default function ContractsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [nextParams, setNextParams] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
+  const chainData = useChainData();
 
   const load = useCallback(async (params?: Record<string, string>, append = false) => {
     setLoading(true);
@@ -75,9 +77,25 @@ export default function ContractsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Show RPC-detected contracts when blockscout returns empty
+  const showRpcFallback = contracts.length === 0 && !loading && chainData.contracts.length > 0 && activeTab === "all" && !searchQuery;
+
   return (
     <div className="max-w-[1280px] mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold text-kite-text mb-6">Smart Contracts</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-[12px] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-kite-text">Smart Contracts</h1>
+          <p className="text-xs text-kite-text-muted mt-0.5">Deployed contracts on Kite AI Network</p>
+        </div>
+      </div>
 
       {/* Filter Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
@@ -110,100 +128,175 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {/* Count bar */}
-      <div className="bg-kite-surface rounded-t-[14px] border border-kite-border px-5 py-3">
-        <span className="text-sm text-kite-text">
-          <span className="font-bold">{contracts.length > 0 ? contracts.length + (nextParams ? "+" : "") : "0"}</span>
-          <span className="text-kite-text-secondary ml-1.5">
-            {activeTab === "verified" ? "Verified Contracts" : activeTab === "unverified" ? "Unverified Contracts" : "Contracts"} Found
-          </span>
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="bg-kite-surface rounded-b-[14px] border border-t-0 border-kite-border overflow-hidden">
-        <div className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-kite-border text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider">
-          <span>Contract</span>
-          <span>Language</span>
-          <span>Compiler</span>
-          <span>Balance</span>
-          <span>Txns</span>
-          <span>Verified</span>
-        </div>
-
-        {contracts.length === 0 && !loading && (
-          <div className="px-5 py-12 text-center">
-            <div className="text-kite-text-muted text-sm mb-1">No contracts found</div>
-            <div className="text-kite-text-muted/60 text-xs">Smart contracts will appear here once they are deployed and indexed.</div>
+      {/* Indexed Contracts Table */}
+      {contracts.length > 0 && (
+        <>
+          <div className="bg-kite-surface rounded-t-[14px] border border-kite-border px-5 py-3">
+            <span className="text-sm text-kite-text">
+              <span className="font-bold">{contracts.length > 0 ? contracts.length + (nextParams ? "+" : "") : "0"}</span>
+              <span className="text-kite-text-secondary ml-1.5">
+                {activeTab === "verified" ? "Verified Contracts" : activeTab === "unverified" ? "Unverified Contracts" : "Contracts"} Found
+              </span>
+            </span>
           </div>
-        )}
 
-        {contracts.map((c) => {
-          const addr = c.address?.hash || "";
-          const isVerified = !!c.verified_at;
+          <div className="bg-kite-surface rounded-b-[14px] border border-t-0 border-kite-border overflow-hidden">
+            <div className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-kite-border text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider">
+              <span>Contract</span>
+              <span>Language</span>
+              <span>Compiler</span>
+              <span>Balance</span>
+              <span>Txns</span>
+              <span>Verified</span>
+            </div>
 
-          return (
+            {contracts.map((c) => {
+              const addr = c.address?.hash || "";
+              const isVerified = !!c.verified_at;
+              return (
+                <Link
+                  key={addr}
+                  href={`/address/${addr}`}
+                  className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-kite-gold-faint border border-kite-border flex items-center justify-center flex-shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-kite-gold">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      {c.address?.name && (
+                        <div className="text-[13px] font-medium text-kite-text group-hover:text-kite-gold transition-colors truncate">
+                          {c.address.name}
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        <span className="text-[12px] font-mono text-kite-text-secondary group-hover:text-kite-gold-dim transition-colors">
+                          {shortenHash(addr, 6)}
+                        </span>
+                        <CopyButton text={addr} />
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[12px] text-kite-text-secondary capitalize">{c.language || "—"}</span>
+                  <span className="text-[11px] font-mono text-kite-text-muted truncate">{c.compiler_version ? c.compiler_version.split("+")[0] : "—"}</span>
+                  <span className="text-[12px] font-mono text-kite-text-secondary">{c.coin_balance ? formatNumber((parseFloat(c.coin_balance) / 1e18).toFixed(2)) : "0"}</span>
+                  <span className="text-[12px] text-kite-text-secondary">{c.tx_count !== null ? formatNumber(c.tx_count) : "—"}</span>
+                  <div className="flex items-center gap-1.5">
+                    {isVerified ? (
+                      <>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        <span className="text-[11px] text-green-400">{relativeTime(c.verified_at)}</span>
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-kite-text-muted">—</span>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {nextParams && !loading && (
+            <div className="flex justify-center mt-5">
+              <button
+                onClick={() => load(nextParams, true)}
+                className="px-8 py-2.5 rounded-[10px] bg-kite-surface border border-kite-border text-sm font-medium text-kite-gold hover:bg-kite-surface-hover hover:border-kite-gold/20 transition-all"
+              >
+                Load More Contracts
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* RPC Detected Contracts Fallback */}
+      {showRpcFallback && (
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
+          <div className="px-5 py-3 border-b border-kite-border">
+            <span className="text-sm text-kite-text">
+              <span className="font-bold">{chainData.contracts.length}</span>
+              <span className="text-kite-text-secondary ml-1.5">Active Contracts Detected</span>
+            </span>
+            <span className="text-[11px] text-kite-text-muted ml-3">(from recent block activity)</span>
+          </div>
+
+          <div className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3 border-b border-kite-border text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider">
+            <span>#</span>
+            <span>Contract Address</span>
+            <span className="text-right">Unique Callers</span>
+            <span className="text-right">Interactions</span>
+          </div>
+
+          {chainData.contracts.map((c, i) => (
             <Link
-              key={addr}
-              href={`/address/${addr}`}
-              className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+              key={c.address}
+              href={`/address/${c.address}`}
+              className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
             >
+              <span className="text-[13px] font-mono text-kite-text-muted w-6">{i + 1}</span>
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-kite-gold-faint border border-kite-border flex items-center justify-center flex-shrink-0">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-kite-gold">
+                <div className="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                     <polyline points="14 2 14 8 20 8"/>
                   </svg>
                 </div>
-                <div className="min-w-0">
-                  {c.address?.name && (
-                    <div className="text-[13px] font-medium text-kite-text group-hover:text-kite-gold transition-colors truncate">
-                      {c.address.name}
-                    </div>
-                  )}
-                  <div className="flex items-center">
-                    <span className="text-[12px] font-mono text-kite-text-secondary group-hover:text-kite-gold-dim transition-colors">
-                      {shortenHash(addr, 6)}
-                    </span>
-                    <CopyButton text={addr} />
-                  </div>
+                <div className="flex items-center">
+                  <span className="text-[13px] font-mono text-kite-text-secondary group-hover:text-kite-gold transition-colors">
+                    {shortenHash(c.address, 10)}
+                  </span>
+                  <CopyButton text={c.address} />
                 </div>
               </div>
-
-              <span className="text-[12px] text-kite-text-secondary capitalize">{c.language || "—"}</span>
-              <span className="text-[11px] font-mono text-kite-text-muted truncate">{c.compiler_version ? c.compiler_version.split("+")[0] : "—"}</span>
-              <span className="text-[12px] font-mono text-kite-text-secondary">{c.coin_balance ? formatNumber((parseFloat(c.coin_balance) / 1e18).toFixed(2)) : "0"}</span>
-              <span className="text-[12px] text-kite-text-secondary">{c.tx_count !== null ? formatNumber(c.tx_count) : "—"}</span>
-
-              <div className="flex items-center gap-1.5">
-                {isVerified ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    <span className="text-[11px] text-green-400">{relativeTime(c.verified_at)}</span>
-                  </>
-                ) : (
-                  <span className="text-[11px] text-kite-text-muted">—</span>
-                )}
-              </div>
+              <span className="text-[13px] font-mono text-kite-text-secondary text-right">{formatNumber(c.callers)}</span>
+              <span className="text-[13px] font-mono text-kite-gold font-semibold text-right">{formatNumber(c.calls)}</span>
             </Link>
-          );
-        })}
+          ))}
+        </div>
+      )}
 
-        {loading && (
-          <div className="px-5 py-8 text-center text-kite-text-muted text-sm">Loading contracts...</div>
-        )}
-      </div>
+      {/* Empty State */}
+      {contracts.length === 0 && !showRpcFallback && !loading && (
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-12 text-center">
+          <div className="w-14 h-14 rounded-full bg-kite-gold-faint border border-kite-border flex items-center justify-center mx-auto mb-4">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-kite-gold-dim">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div className="text-kite-text-secondary text-sm font-medium mb-1.5">
+            {searchQuery ? "No contracts match your search" : activeTab === "verified" ? "No verified contracts yet" : "No contracts found"}
+          </div>
+          <div className="text-kite-text-muted text-xs max-w-sm mx-auto">
+            {searchQuery
+              ? "Try searching with a different contract name or address."
+              : "Contracts will appear here as they are deployed and indexed by the explorer. This may take a few moments after deployment."}
+          </div>
+        </div>
+      )}
 
-      {nextParams && !loading && (
-        <div className="flex justify-center mt-5">
-          <button
-            onClick={() => load(nextParams, true)}
-            className="px-8 py-2.5 rounded-[10px] bg-kite-surface border border-kite-border text-sm font-medium text-kite-gold hover:bg-kite-surface-hover hover:border-kite-gold/20 transition-all"
-          >
-            Load More Contracts
-          </button>
+      {loading && (
+        <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
+          <div className="animate-pulse space-y-0">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-kite-border/15">
+                <div className="w-7 h-7 rounded-lg bg-kite-border" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-kite-border rounded w-48" />
+                  <div className="h-2.5 bg-kite-border/60 rounded w-32" />
+                </div>
+                <div className="h-3 bg-kite-border rounded w-16" />
+                <div className="h-3 bg-kite-border rounded w-12" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
