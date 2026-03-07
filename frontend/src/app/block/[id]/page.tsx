@@ -59,7 +59,7 @@ export default function BlockDetailPage() {
       {/* Details */}
       <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden mb-5">
         {rows.map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[200px_1fr] border-b border-kite-border/20 px-4 py-2.5">
+          <div key={label} className="grid grid-cols-[200px_1fr] border-b border-transparent px-4 py-2.5">
             <span className="text-xs font-semibold text-kite-text-muted uppercase">{label}</span>
             <span className="text-sm text-kite-text">{value}</span>
           </div>
@@ -83,7 +83,7 @@ export default function BlockDetailPage() {
           <Link
             key={tx.hash}
             href={`/tx/${tx.hash}`}
-            className="grid grid-cols-[1fr_120px_120px_100px_80px] gap-3 px-4 py-2.5 border-b border-kite-border/20 hover:bg-[#15140E] transition-colors items-center"
+            className="grid grid-cols-[1fr_120px_120px_100px_80px] gap-3 px-4 py-2.5 border-b border-transparent hover:bg-[#15140E] transition-colors items-center"
           >
             <span className="text-xs font-mono text-kite-gold truncate">{tx.hash}</span>
             <span className="text-xs font-mono text-kite-text-secondary truncate">{shortenHash(tx.from?.hash || "", 4)}</span>

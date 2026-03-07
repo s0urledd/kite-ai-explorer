@@ -11,14 +11,14 @@ interface LatestBlocksProps {
 export function LatestBlocks({ blocks }: LatestBlocksProps) {
   return (
     <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-kite-border/30">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-transparent">
         <span className="text-sm font-semibold text-kite-text">Latest Blocks</span>
         <Link href="/blocks" className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors">
           View all &rarr;
         </Link>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-kite-border/15">
+      <div className="max-h-[420px] overflow-y-auto divide-y divide-transparent">
         {blocks.map((b) => {
           const n = hex(b.number);
           const tc = Array.isArray(b.transactions) ? b.transactions.length : 0;

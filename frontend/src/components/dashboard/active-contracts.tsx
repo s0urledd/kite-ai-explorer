@@ -16,7 +16,7 @@ interface ActiveContractsProps {
 export function ActiveContracts({ contracts }: ActiveContractsProps) {
   return (
     <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-kite-border/30">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-transparent">
         <div className="flex items-center gap-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -30,7 +30,7 @@ export function ActiveContracts({ contracts }: ActiveContractsProps) {
       </div>
 
       {/* Header */}
-      <div className="grid grid-cols-[auto_1fr_140px_140px] gap-4 px-5 py-2.5 border-b border-kite-border/25 text-[11px] text-kite-text-muted font-semibold uppercase tracking-wider">
+      <div className="grid grid-cols-[auto_1fr_140px_140px] gap-4 px-5 py-2.5 border-b border-transparent text-[11px] text-kite-text-muted font-semibold uppercase tracking-wider">
         <span className="w-6">#</span>
         <span>Contract Address</span>
         <span className="text-right">Unique Callers</span>
@@ -38,7 +38,7 @@ export function ActiveContracts({ contracts }: ActiveContractsProps) {
       </div>
 
       {/* Rows */}
-      <div className="divide-y divide-kite-border/10">
+      <div className="divide-y divide-transparent">
         {contracts.map((c, i) => (
           <Link
             key={c.address}

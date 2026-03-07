@@ -86,13 +86,13 @@ export default function TxDetailPage() {
       {tab === "overview" && (
         <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
           {rows.map(([label, value]) => (
-            <div key={label} className="grid grid-cols-[180px_1fr] border-b border-kite-border/20 px-4 py-2.5">
+            <div key={label} className="grid grid-cols-[180px_1fr] border-b border-transparent px-4 py-2.5">
               <span className="text-xs font-semibold text-kite-text-muted uppercase">{label}</span>
               <span className="text-sm text-kite-text">{value}</span>
             </div>
           ))}
           {tx.raw_input && tx.raw_input !== "0x" && (
-            <div className="px-4 py-3 border-b border-kite-border/20">
+            <div className="px-4 py-3 border-b border-transparent">
               <span className="text-xs font-semibold text-kite-text-muted uppercase block mb-2">Input Data</span>
               <pre className="text-xs font-mono text-kite-text-secondary bg-kite-bg rounded-lg p-3 overflow-x-auto max-h-40">{tx.raw_input}</pre>
             </div>
@@ -135,7 +135,7 @@ export default function TxDetailPage() {
             <div className="px-4 py-6 text-center text-kite-text-muted text-sm">No internal transactions</div>
           )}
           {internalTxs.map((itx, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-2.5 border-b border-kite-border/20">
+            <div key={i} className="flex items-center gap-4 px-4 py-2.5 border-b border-transparent">
               <span className={`text-xs font-medium ${itx.success ? "text-green-400" : "text-red-400"}`}>
                 {itx.type}
               </span>
