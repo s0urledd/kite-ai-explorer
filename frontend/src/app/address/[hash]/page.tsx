@@ -185,22 +185,32 @@ export default function AddressPage() {
         </div>
       </div>
 
-      {/* Overview - compact key-value rows */}
-      <div className="bg-kite-surface rounded-[14px] mb-5 overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2">
-          <div className="px-5 py-3 flex items-center gap-3">
+      {/* Overview - Etherscan-style two-column cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        {/* Overview Card */}
+        <div className="bg-kite-surface rounded-[14px] overflow-hidden">
+          <div className="px-5 py-2.5 text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider bg-kite-bg">Overview</div>
+          <div className="px-5 py-2.5 flex items-center gap-3">
             <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Balance:</span>
             <span className="text-[14px] font-mono font-semibold text-kite-text">{kiteBalance} KITE</span>
           </div>
-          <div className="px-5 py-3 flex items-center gap-3">
+          <div className="px-5 py-2.5 flex items-center gap-3">
+            <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Token Holdings:</span>
+            <span className="text-[13px] font-mono text-kite-text">{tokenBalances.length} token{tokenBalances.length !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+        {/* More Info Card */}
+        <div className="bg-kite-surface rounded-[14px] overflow-hidden">
+          <div className="px-5 py-2.5 text-[11px] font-semibold text-kite-text-muted uppercase tracking-wider bg-kite-bg">More Info</div>
+          <div className="px-5 py-2.5 flex items-center gap-3">
             <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Transactions:</span>
             <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.transactions_count || "0")}</span>
           </div>
-          <div className="px-5 py-3 flex items-center gap-3">
+          <div className="px-5 py-2.5 flex items-center gap-3">
             <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Transfers:</span>
             <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.token_transfers_count || "0")}</span>
           </div>
-          <div className="px-5 py-3 flex items-center gap-3">
+          <div className="px-5 py-2.5 flex items-center gap-3">
             <span className="text-[12px] text-kite-text-muted w-28 flex-shrink-0">Gas Used:</span>
             <span className="text-[14px] font-mono font-semibold text-kite-text">{formatNumber(counters.gas_usage_count || "0", true)}</span>
           </div>
@@ -248,7 +258,7 @@ export default function AddressPage() {
             ))}
           </div>
         )}
-      </div>}
+      </div>
 
       {/* Extra contract info */}
       {isContract && (address.creation_tx_hash || address.creator_address_hash) && (
