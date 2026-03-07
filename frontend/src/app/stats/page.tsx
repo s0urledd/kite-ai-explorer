@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { blockscout } from "@/lib/api/blockscout";
-
+import type { ChainStats, TransactionChartData } from "@/lib/types/api";
 import { formatNumber } from "@/lib/utils/format";
 import { useChainData } from "@/lib/hooks/use-chain-data";
-import { useBlockscoutStats } from "@/lib/hooks/use-blockscout-stats";
 import {
   AreaChart,
   Area,
@@ -56,26 +55,30 @@ function ChartCard({ title, children, rightSlot }: { title: string; children: Re
 }
 
 export default function StatsPage() {
+  const [stats, setStats] = useState<ChainStats | null>(null);
   const [chartData, setChartData] = useState<{ date: string; tx_count: number }[]>([]);
-  const [chartLoading, setChartLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [activeChart, setActiveChart] = useState<"area" | "bar">("area");
   const chainData = useChainData();
-  const { stats: bsStats, loading: statsLoading } = useBlockscoutStats();
 
   useEffect(() => {
     (async () => {
       try {
-        const c = await blockscout.getTransactionCharts().catch(() => ({ chart_data: [] }));
+        const [s, c] = await Promise.all([
+          blockscout.getStats(),
+          blockscout.getTransactionCharts().catch(() => ({ chart_data: [] })),
+        ]);
+        setStats(s);
         setChartData(c.chart_data || []);
       } catch (e) {
-        console.error("Failed to load chart data", e);
+        console.error("Failed to load stats", e);
       } finally {
-        setChartLoading(false);
+        setLoading(false);
       }
     })();
   }, []);
 
-  if (statsLoading && chartLoading) {
+  if (loading) {
     return (
       <div className="max-w-[1280px] mx-auto px-6 py-10">
         <div className="animate-pulse space-y-4">
@@ -92,43 +95,45 @@ export default function StatsPage() {
     );
   }
 
+  if (!stats) return <div className="max-w-[1280px] mx-auto px-6 py-10 text-red-400">Failed to load stats</div>;
+
   // Overview stat cards (Etherscan style)
   const overviewStats = [
     {
       label: "Total Transactions",
-      value: formatNumber(bsStats.totalTransactions),
-      subLabel: `${formatNumber(bsStats.transactions24h)} today`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
-      color: "border-kite-gold/20",
+      value: formatNumber(stats.total_transactions),
+      subLabel: `${formatNumber(stats.transactions_today)} today`,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+      color: "border-kite-border",
     },
     {
       label: "Total Blocks",
-      value: formatNumber(bsStats.totalBlocks),
-      subLabel: `${bsStats.averageBlockTime > 0 ? (bsStats.averageBlockTime / 1000).toFixed(1) : "—"}s avg block time`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-blue-400"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-      color: "border-blue-500/20",
+      value: formatNumber(stats.total_blocks),
+      subLabel: `${(stats.average_block_time / 1000).toFixed(1)}s avg block time`,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+      color: "border-kite-border",
     },
     {
       label: "Wallet Addresses",
-      value: formatNumber(bsStats.totalAddresses),
+      value: formatNumber(stats.total_addresses),
       subLabel: "Total unique addresses",
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-green-400"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-      color: "border-green-500/20",
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+      color: "border-kite-border",
     },
     {
       label: "Network Utilization",
-      value: `${bsStats.networkUtilization.toFixed(1)}%`,
-      subLabel: `${formatNumber(bsStats.gasUsedToday, true)} gas today`,
-      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-purple-400"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
-      color: "border-purple-500/20",
+      value: `${stats.network_utilization_percentage.toFixed(1)}%`,
+      subLabel: `${formatNumber(stats.gas_used_today, true)} gas today`,
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
+      color: "border-kite-border",
     },
   ];
 
   // Gas tracker
   const gasCards = [
-    { label: "Slow", value: bsStats.gasPrice.slow ?? "—", color: "text-yellow-400", bg: "bg-yellow-400/5", borderColor: "border-yellow-400/15" },
-    { label: "Average", value: bsStats.gasPrice.average ?? "—", color: "text-kite-gold", bg: "bg-kite-gold-faint", borderColor: "border-kite-gold/15" },
-    { label: "Fast", value: bsStats.gasPrice.fast ?? "—", color: "text-green-400", bg: "bg-green-400/5", borderColor: "border-green-400/15" },
+    { label: "Slow", value: stats.gas_prices.slow ?? "—", color: "text-yellow-400", bg: "bg-yellow-400/5", borderColor: "border-yellow-400/15" },
+    { label: "Average", value: stats.gas_prices.average ?? "—", color: "text-kite-gold", bg: "bg-kite-gold-faint", borderColor: "border-kite-gold/15" },
+    { label: "Fast", value: stats.gas_prices.fast ?? "—", color: "text-green-400", bg: "bg-green-400/5", borderColor: "border-green-400/15" },
   ];
 
   // Prepare Gas History chart from RPC data
@@ -142,8 +147,8 @@ export default function StatsPage() {
 
   // Network pie chart data
   const utilizationData = [
-    { name: "Used", value: bsStats.networkUtilization },
-    { name: "Available", value: 100 - bsStats.networkUtilization },
+    { name: "Used", value: stats.network_utilization_percentage },
+    { name: "Available", value: 100 - stats.network_utilization_percentage },
   ];
   const PIE_COLORS = [CHART_COLORS.gold, CHART_COLORS.grid];
 
@@ -182,7 +187,7 @@ export default function StatsPage() {
       {/* Gas Tracker */}
       <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-orange-400">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
           </svg>
           <h2 className="text-sm font-semibold text-kite-text">Gas Tracker</h2>
@@ -321,7 +326,7 @@ export default function StatsPage() {
               </PieChart>
             </ResponsiveContainer>
             <div className="text-center -mt-4">
-              <div className="text-2xl font-bold font-mono text-kite-text">{bsStats.networkUtilization.toFixed(1)}%</div>
+              <div className="text-2xl font-bold font-mono text-kite-text">{stats.network_utilization_percentage.toFixed(1)}%</div>
               <div className="text-[11px] text-kite-text-muted">Current utilization</div>
             </div>
           </div>
@@ -331,12 +336,12 @@ export default function StatsPage() {
         <ChartCard title="Network Summary">
           <div className="space-y-3.5">
             {[
-              { label: "Avg Block Time", value: `${bsStats.averageBlockTime > 0 ? (bsStats.averageBlockTime / 1000).toFixed(1) : "—"}s`, color: "text-kite-gold" },
-              { label: "Current TPS", value: chainData.tps.toFixed(2), color: "text-blue-400" },
-              { label: "Peak TPS", value: chainData.peakTps.toFixed(2), color: "text-green-400" },
-              { label: "Total Addresses", value: formatNumber(bsStats.totalAddresses), color: "text-orange-400" },
-              { label: "Gas Used Today", value: formatNumber(bsStats.gasUsedToday, true), color: "text-purple-400" },
-              { label: "Transactions Today", value: formatNumber(bsStats.transactions24h), color: "text-kite-gold" },
+              { label: "Avg Block Time", value: `${(stats.average_block_time / 1000).toFixed(1)}s`, color: "text-kite-text" },
+              { label: "Current TPS", value: chainData.tps.toFixed(2), color: "text-kite-text" },
+              { label: "Peak TPS", value: chainData.peakTps.toFixed(2), color: "text-kite-text" },
+              { label: "Total Gas Used", value: formatNumber(stats.total_gas_used, true), color: "text-kite-text" },
+              { label: "Gas Used Today", value: formatNumber(stats.gas_used_today, true), color: "text-kite-text" },
+              { label: "Transactions Today", value: formatNumber(stats.transactions_today), color: "text-kite-text" },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-2 border-b border-kite-border/20 last:border-0">
                 <span className="text-[12px] text-kite-text-muted">{item.label}</span>
@@ -352,7 +357,7 @@ export default function StatsPage() {
         <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-kite-border/30">
             <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-purple-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
