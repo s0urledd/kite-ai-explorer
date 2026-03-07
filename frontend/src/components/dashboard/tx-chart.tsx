@@ -17,7 +17,7 @@ interface TxChartProps {
 export function TxChart({ data }: TxChartProps) {
   return (
     <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-kite-border/30">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-transparent">
         <span className="text-sm font-semibold text-kite-text">Transaction Activity</span>
         <span className="text-[11px] text-kite-text-muted bg-kite-border/50 px-2 py-0.5 rounded font-mono">
           25 blocks

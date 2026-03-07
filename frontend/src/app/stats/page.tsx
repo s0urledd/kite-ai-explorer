@@ -131,9 +131,9 @@ export default function StatsPage() {
 
   // Gas tracker
   const gasCards = [
-    { label: "Slow", value: stats.gas_prices.slow ?? "—", color: "text-yellow-400", bg: "bg-yellow-400/5", borderColor: "border-yellow-400/15" },
-    { label: "Average", value: stats.gas_prices.average ?? "—", color: "text-kite-gold", bg: "bg-kite-gold-faint", borderColor: "border-kite-gold/15" },
-    { label: "Fast", value: stats.gas_prices.fast ?? "—", color: "text-green-400", bg: "bg-green-400/5", borderColor: "border-green-400/15" },
+    { label: "Slow", value: stats.gas_prices.slow ?? "—", color: "text-yellow-400", bg: "bg-yellow-400/5", borderColor: "border-transparent" },
+    { label: "Average", value: stats.gas_prices.average ?? "—", color: "text-kite-gold", bg: "bg-kite-gold-faint", borderColor: "border-transparent" },
+    { label: "Fast", value: stats.gas_prices.fast ?? "—", color: "text-green-400", bg: "bg-green-400/5", borderColor: "border-transparent" },
   ];
 
   // Prepare Gas History chart from RPC data
@@ -155,7 +155,7 @@ export default function StatsPage() {
   return (
     <div className="max-w-[1280px] mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-[12px] bg-kite-gold-faint border border-kite-gold/15 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-[12px] bg-kite-gold-faint border border-transparent flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
             <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
             <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
@@ -343,7 +343,7 @@ export default function StatsPage() {
               { label: "Gas Used Today", value: formatNumber(stats.gas_used_today, true), color: "text-kite-text" },
               { label: "Transactions Today", value: formatNumber(stats.transactions_today), color: "text-kite-text" },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between py-2 border-b border-kite-border/20 last:border-0">
+              <div key={item.label} className="flex items-center justify-between py-2 border-b border-transparent last:border-0">
                 <span className="text-[12px] text-kite-text-muted">{item.label}</span>
                 <span className={`text-[13px] font-mono font-semibold ${item.color}`}>{item.value}</span>
               </div>
@@ -355,7 +355,7 @@ export default function StatsPage() {
       {/* Active Contracts from RPC */}
       {chainData.contracts.length > 0 && (
         <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-kite-border/30">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-transparent">
             <div className="flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -379,7 +379,7 @@ export default function StatsPage() {
             <Link
               key={c.address}
               href={`/address/${c.address}`}
-              className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors group"
+              className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3 border-b border-transparent hover:bg-kite-surface-hover transition-colors group"
             >
               <span className="text-[13px] font-mono text-kite-text-muted w-6">{i + 1}</span>
               <span className="text-[13px] font-mono text-kite-text-secondary group-hover:text-kite-gold transition-colors truncate">

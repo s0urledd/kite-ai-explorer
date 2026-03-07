@@ -100,11 +100,11 @@ export default function BlocksPage() {
           return (
             <div
               key={b.height}
-              className="grid grid-cols-[120px_1fr_80px_200px_160px_130px] gap-4 px-5 py-4 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center"
+              className="grid grid-cols-[120px_1fr_80px_200px_160px_130px] gap-4 px-5 py-4 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center"
             >
               {/* Height - badge style */}
               <Link href={`/block/${b.height}`} className="inline-flex">
-                <span className="text-[13px] font-mono font-semibold text-kite-gold bg-kite-gold-faint border border-kite-gold/15 rounded-md px-2.5 py-1 hover:bg-kite-gold/10 transition-colors">
+                <span className="text-[13px] font-mono font-semibold text-kite-gold bg-kite-gold-faint border border-transparent rounded-md px-2.5 py-1 hover:bg-kite-gold/10 transition-colors">
                   {formatNumber(b.height)}
                 </span>
               </Link>

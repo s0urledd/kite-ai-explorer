@@ -366,7 +366,7 @@ export default function AddressPage() {
               return (
                 <div
                   key={tx.hash}
-                  className="grid grid-cols-[1fr_80px_60px_140px_100px_80px_90px] gap-3 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center"
+                  className="grid grid-cols-[1fr_80px_60px_140px_100px_80px_90px] gap-3 px-5 py-3 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center"
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Link href={`/tx/${tx.hash}`} className="text-[13px] font-mono text-kite-gold hover:underline truncate">
@@ -503,7 +503,7 @@ export default function AddressPage() {
                   <div className="text-kite-text-muted text-xs">Contract ABI must be verified to expose read methods.</div>
                 </div>
               ) : (
-                <div className="divide-y divide-kite-border/15">
+                <div className="divide-y divide-transparent">
                   {readMethods.map((m, idx) => (
                     <div key={m.method_id || idx} className="p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -552,7 +552,7 @@ export default function AddressPage() {
                   <div className="text-kite-text-muted text-xs">Contract ABI must be verified to expose write methods.</div>
                 </div>
               ) : (
-                <div className="divide-y divide-kite-border/15">
+                <div className="divide-y divide-transparent">
                   {writeMethods.map((m, idx) => (
                     <div key={m.method_id || idx} className="p-4">
                       <div className="flex items-center gap-2 mb-2">

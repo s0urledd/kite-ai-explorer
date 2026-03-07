@@ -89,7 +89,7 @@ export default function TransactionsPage() {
           return (
             <div
               key={tx.hash}
-              className="grid grid-cols-[1fr_80px_70px_120px_120px_90px_80px_80px] gap-2 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center"
+              className="grid grid-cols-[1fr_80px_70px_120px_120px_90px_80px_80px] gap-2 px-5 py-3 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center"
             >
               <div className="flex items-center gap-1 min-w-0">
                 <Link href={`/tx/${tx.hash}`} className="text-[13px] font-mono text-kite-gold hover:underline truncate">

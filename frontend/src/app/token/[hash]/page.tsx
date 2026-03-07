@@ -31,10 +31,10 @@ function CopyButton({ text }: { text: string }) {
 
 function tokenTypeColor(type: string) {
   switch (type) {
-    case "ERC-20": return "text-blue-400 bg-blue-400/10 border-blue-400/20";
-    case "ERC-721": return "text-purple-400 bg-purple-400/10 border-purple-400/20";
-    case "ERC-1155": return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
-    default: return "text-kite-gold-dim bg-kite-gold-faint border-kite-gold/15";
+    case "ERC-20": return "text-blue-400 bg-blue-400/10 border-transparent";
+    case "ERC-721": return "text-purple-400 bg-purple-400/10 border-transparent";
+    case "ERC-1155": return "text-emerald-400 bg-emerald-400/10 border-transparent";
+    default: return "text-kite-gold-dim bg-kite-gold-faint border-transparent";
   }
 }
 
@@ -205,7 +205,7 @@ export default function TokenDetailPage() {
           )}
 
           {transfers.map((tr, idx) => (
-            <div key={`${tr.tx_hash}-${tr.log_index}-${idx}`} className="grid grid-cols-[1fr_130px_130px_100px_90px] gap-3 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center">
+            <div key={`${tr.tx_hash}-${tr.log_index}-${idx}`} className="grid grid-cols-[1fr_130px_130px_100px_90px] gap-3 px-5 py-3 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center">
               <Link href={`/tx/${tr.tx_hash}`} className="text-[13px] font-mono text-kite-gold hover:underline truncate">
                 {shortenHash(tr.tx_hash, 8)}
               </Link>
@@ -269,7 +269,7 @@ export default function TokenDetailPage() {
               <Link
                 key={h.address.hash}
                 href={`/address/${h.address.hash}`}
-                className="grid grid-cols-[auto_1fr_200px_120px] gap-4 px-5 py-3 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+                className="grid grid-cols-[auto_1fr_200px_120px] gap-4 px-5 py-3 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center group"
               >
                 <span className="w-8 text-[12px] font-mono text-kite-text-muted">{idx + 1}</span>
                 <div className="flex items-center gap-1.5 min-w-0">

@@ -157,7 +157,7 @@ export default function ContractsPage() {
                 <Link
                   key={addr}
                   href={`/address/${addr}`}
-                  className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+                  className="grid grid-cols-[1fr_120px_120px_100px_100px_100px] gap-4 px-5 py-3.5 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center group"
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-kite-gold-faint border border-kite-border flex items-center justify-center flex-shrink-0">
@@ -236,7 +236,7 @@ export default function ContractsPage() {
             <Link
               key={c.address}
               href={`/address/${c.address}`}
-              className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+              className="grid grid-cols-[auto_1fr_120px_120px] gap-4 px-5 py-3.5 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center group"
             >
               <span className="text-[13px] font-mono text-kite-text-muted w-6">{i + 1}</span>
               <div className="flex items-center gap-2 min-w-0">
@@ -286,7 +286,7 @@ export default function ContractsPage() {
         <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
           <div className="animate-pulse space-y-0">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-kite-border/15">
+              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-transparent">
                 <div className="w-7 h-7 rounded-lg bg-kite-border" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3 bg-kite-border rounded w-48" />

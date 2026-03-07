@@ -83,9 +83,9 @@ export default function ApiDocsPage() {
             </button>
 
             {expanded === group.category && (
-              <div className="border-t border-kite-border/30">
+              <div className="border-t border-transparent">
                 {group.items.map((ep) => (
-                  <div key={ep.path} className="px-4 py-3 border-b border-kite-border/20 last:border-b-0">
+                  <div key={ep.path} className="px-4 py-3 border-b border-transparent last:border-b-0">
                     <div className="flex items-center gap-2.5 mb-1">
                       <span className="text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded">
                         {ep.method}

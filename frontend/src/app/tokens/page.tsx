@@ -44,11 +44,11 @@ function CopyButton({ text }: { text: string }) {
 
 function tokenTypeColor(type: string) {
   switch (type) {
-    case "ERC-20": return "text-blue-400 bg-blue-400/10 border-blue-400/20";
-    case "ERC-721": return "text-purple-400 bg-purple-400/10 border-purple-400/20";
-    case "ERC-1155": return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
-    case "ERC-404": return "text-orange-400 bg-orange-400/10 border-orange-400/20";
-    default: return "text-kite-gold-dim bg-kite-gold-faint border-kite-gold/15";
+    case "ERC-20": return "text-blue-400 bg-blue-400/10 border-transparent";
+    case "ERC-721": return "text-purple-400 bg-purple-400/10 border-transparent";
+    case "ERC-1155": return "text-emerald-400 bg-emerald-400/10 border-transparent";
+    case "ERC-404": return "text-orange-400 bg-orange-400/10 border-transparent";
+    default: return "text-kite-gold-dim bg-kite-gold-faint border-transparent";
   }
 }
 
@@ -185,7 +185,7 @@ export default function TokensPage() {
           <Link
             key={token.address}
             href={`/token/${token.address}`}
-            className="grid grid-cols-[40px_1fr_80px_100px_140px_130px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
+            className="grid grid-cols-[40px_1fr_80px_100px_140px_130px] gap-4 px-5 py-3.5 border-b border-transparent hover:bg-kite-surface-hover transition-colors items-center group"
           >
             {/* Index */}
             <span className="text-xs text-kite-text-muted">{idx + 1}</span>
