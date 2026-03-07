@@ -153,13 +153,13 @@ export default function AddressPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 ${isContract ? "bg-purple-500/10 border border-purple-500/20" : "bg-kite-gold-faint border border-kite-gold/15"}`}>
+          <div className="w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 bg-kite-surface border border-kite-border">
             {isContract ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-kite-text-muted">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M22 10H2"/><path d="M6 14h.01"/><path d="M10 14h.01"/>
               </svg>
             )}
@@ -190,8 +190,8 @@ export default function AddressPage() {
         {/* KITE Balance Card */}
         <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-kite-gold-faint border border-kite-gold/15 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10l4-4 4 4"/>
               </svg>
             </div>
@@ -204,8 +204,8 @@ export default function AddressPage() {
         {/* Activity Stats Card */}
         <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-blue-400">
+            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
             </div>
@@ -226,8 +226,8 @@ export default function AddressPage() {
         {/* Gas & Info Card */}
         <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-orange-400">
+            <div className="w-7 h-7 rounded-full bg-kite-surface border border-kite-border flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
             </div>
@@ -243,7 +243,7 @@ export default function AddressPage() {
         <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-gold">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
                 <circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
               </svg>
               <h3 className="text-sm font-semibold text-kite-text">Token Holdings</h3>
