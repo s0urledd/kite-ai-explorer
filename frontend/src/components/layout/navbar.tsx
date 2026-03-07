@@ -5,11 +5,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KiteLogo } from "@/components/common/kite-logo";
 import { WalletModal } from "@/components/layout/wallet-modal";
+import { useKitePrice } from "@/lib/hooks/use-kite-price";
+import { useTheme } from "@/lib/hooks/use-theme";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", match: ["/"] },
   { href: "/blocks", label: "Blockchain", match: ["/blocks", "/block/", "/txs", "/tx/"] },
-  { href: "/tokens", label: "Tokens", match: ["/tokens"] },
+  { href: "/tokens", label: "Tokens", match: ["/tokens", "/token/"] },
   { href: "/contracts", label: "Contracts", match: ["/contracts"] },
   { href: "/stats", label: "Charts & Stats", match: ["/stats"] },
   { href: "/api-docs", label: "API", match: ["/api-docs"] },
@@ -18,6 +20,12 @@ const NAV_ITEMS = [
 export function Navbar() {
   const pathname = usePathname();
   const [walletOpen, setWalletOpen] = useState(false);
+  const price = useKitePrice();
+  const { theme, toggle } = useTheme();
+
+  const priceNum = parseFloat(price.priceUsd);
+  const change = price.priceChange24h;
+  const isPositive = change >= 0;
 
   return (
     <>
@@ -27,7 +35,20 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             <KiteLogo size={26} />
             <span className="text-lg font-bold text-kite-text tracking-wide">Kite</span>
-            <div className="flex gap-0.5 ml-4">
+
+            {/* Price badge */}
+            {priceNum > 0 && (
+              <div className="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg bg-kite-surface border border-kite-border">
+                <span className="text-[12px] font-mono font-semibold text-kite-text">
+                  ${priceNum.toFixed(4)}
+                </span>
+                <span className={`text-[11px] font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+                  ({isPositive ? "+" : ""}{change.toFixed(2)}%)
+                </span>
+              </div>
+            )}
+
+            <div className="flex gap-0.5 ml-3">
               {NAV_ITEMS.map((item) => {
                 const active = item.match.some((m) => m === "/" ? pathname === "/" : pathname.startsWith(m));
                 return (
@@ -49,13 +70,30 @@ export function Navbar() {
 
           {/* Right */}
           <div className="flex items-center gap-2.5">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggle}
+              className="w-8 h-8 rounded-lg border border-kite-border bg-kite-surface flex items-center justify-center text-kite-text-muted hover:text-kite-gold hover:border-kite-gold/20 transition-all"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              )}
+            </button>
+
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-kite-border bg-kite-surface text-kite-text-secondary">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]" />
               <span className="text-xs">Mainnet</span>
             </div>
             <button
               onClick={() => setWalletOpen(true)}
-              className="bg-kite-gold text-kite-bg px-4 py-2 rounded-[10px] font-semibold text-[13px] hover:bg-kite-gold-light hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(196,169,106,0.2)] transition-all"
+              className="bg-kite-gold text-[#09090B] px-4 py-2 rounded-[10px] font-semibold text-[13px] hover:bg-kite-gold-light hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(196,169,106,0.2)] transition-all"
             >
               Connect Wallet
             </button>

@@ -63,7 +63,7 @@ export function SearchBar() {
   };
 
   return (
-    <div className="relative py-7 px-6 bg-gradient-to-b from-[#110F0A] to-kite-bg overflow-hidden">
+    <div className="relative py-7 px-6 bg-kite-bg overflow-hidden">
       {/* Glow */}
       <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[400px] h-[120px] bg-[radial-gradient(ellipse,rgba(196,169,106,0.06)_0%,transparent_70%)] pointer-events-none" />
 

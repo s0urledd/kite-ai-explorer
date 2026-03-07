@@ -2,12 +2,18 @@
 
 import { AnimatedNumber } from "@/components/common/animated-number";
 import type { ChainData } from "@/lib/hooks/use-chain-data";
+import { useKitePrice } from "@/lib/hooks/use-kite-price";
 
 interface StatStripProps {
   data: ChainData;
 }
 
 export function StatStrip({ data }: StatStripProps) {
+  const price = useKitePrice();
+  const priceNum = parseFloat(price.priceUsd);
+  const change = price.priceChange24h;
+  const isPositive = change >= 0;
+
   const cards = [
     {
       icon: (
@@ -42,10 +48,21 @@ export function StatStrip({ data }: StatStripProps) {
         </svg>
       ),
       title: "KITE Price",
-      main: <span className="text-xl font-bold font-mono text-kite-text">$&mdash;</span>,
+      main: (
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-bold font-mono text-kite-text">
+            {priceNum > 0 ? `$${priceNum.toFixed(4)}` : "$\u2014"}
+          </span>
+          {priceNum > 0 && (
+            <span className={`text-[12px] font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+              {isPositive ? "+" : ""}{change.toFixed(2)}%
+            </span>
+          )}
+        </div>
+      ),
       rows: [
-        { label: "Addresses", value: data.addressCount.toLocaleString() },
-        { label: "Contracts", value: data.contracts.length.toLocaleString() },
+        { label: "Market Cap", value: price.marketCap > 0 ? `$${(price.marketCap / 1e6).toFixed(2)}M` : "\u2014" },
+        { label: "FDV", value: price.fdv > 0 ? `$${(price.fdv / 1e9).toFixed(2)}B` : "\u2014" },
       ],
     },
     {
@@ -57,7 +74,7 @@ export function StatStrip({ data }: StatStripProps) {
       title: "Network Load",
       main: <span className="text-xl font-bold font-mono text-kite-text">{data.utilization.toFixed(1)}%</span>,
       rows: [
-        { label: "Gas Price", value: data.gasPrice.toFixed(1) + " Gwei" },
+        { label: "Addresses", value: data.addressCount.toLocaleString() },
         { label: "Active Contracts", value: data.contracts.length.toLocaleString() },
       ],
     },

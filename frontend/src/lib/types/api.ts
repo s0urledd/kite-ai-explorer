@@ -223,6 +223,16 @@ export interface SmartContract {
   market_cap: string | null;
 }
 
+/** Smart contract method (from ABI) */
+export interface ContractMethod {
+  type: string;
+  method_id: string;
+  name: string;
+  inputs: Array<{ name: string; type: string; value?: string }>;
+  outputs: Array<{ name: string; type: string; value?: string }>;
+  stateMutability?: string;
+}
+
 /** Paginated response wrapper */
 export interface PaginatedResponse<T> {
   items: T[];

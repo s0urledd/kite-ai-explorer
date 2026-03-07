@@ -184,7 +184,7 @@ export default function TokensPage() {
         {tokens.map((token, idx) => (
           <Link
             key={token.address}
-            href={`/address/${token.address}`}
+            href={`/token/${token.address}`}
             className="grid grid-cols-[40px_1fr_80px_100px_140px_130px] gap-4 px-5 py-3.5 border-b border-kite-border/15 hover:bg-kite-surface-hover transition-colors items-center group"
           >
             {/* Index */}

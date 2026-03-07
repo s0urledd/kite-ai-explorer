@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { blockscout } from "@/lib/api/blockscout";
-import type { Address, Transaction, PaginatedResponse } from "@/lib/types/api";
+import type { Address, Transaction, PaginatedResponse, ContractMethod } from "@/lib/types/api";
 import { weiToKite, shortenHash, txStatusLabel, txStatusColor, formatNumber } from "@/lib/utils/format";
 
 interface TokenBalance {
@@ -69,10 +69,13 @@ export default function AddressPage() {
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [counters, setCounters] = useState<Record<string, string>>({});
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [readMethods, setReadMethods] = useState<ContractMethod[]>([]);
+  const [writeMethods, setWriteMethods] = useState<ContractMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("transactions");
   const [nextTxParams, setNextTxParams] = useState<Record<string, string> | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [contractSubTab, setContractSubTab] = useState<"info" | "read" | "write">("info");
 
   useEffect(() => {
     if (!hash) return;
@@ -89,6 +92,16 @@ export default function AddressPage() {
         setNextTxParams(txData.next_page_params);
         setCounters(ctr);
         setTokenBalances(tokens as TokenBalance[]);
+
+        // Load contract methods if it's a contract
+        if (addr.is_contract) {
+          const [rm, wm] = await Promise.all([
+            blockscout.getSmartContractMethods(hash, "read").catch(() => []),
+            blockscout.getSmartContractMethods(hash, "write").catch(() => []),
+          ]);
+          setReadMethods(rm);
+          setWriteMethods(wm);
+        }
       } catch (e) {
         console.error("Failed to load address", e);
       } finally {
@@ -432,28 +445,140 @@ export default function AddressPage() {
         </div>
       )}
 
-      {/* Tab Content: Contract Info */}
+      {/* Tab Content: Contract Info + ABI */}
       {activeTab === "contract" && (
-        <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
-          <h3 className="text-sm font-semibold text-kite-text mb-4">Contract Information</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-[11px] text-kite-text-muted uppercase">Has Read Methods</span>
-              <div className="text-kite-text mt-1">{address.has_methods_read ? "Yes" : "No"}</div>
-            </div>
-            <div>
-              <span className="text-[11px] text-kite-text-muted uppercase">Has Write Methods</span>
-              <div className="text-kite-text mt-1">{address.has_methods_write ? "Yes" : "No"}</div>
-            </div>
-            <div>
-              <span className="text-[11px] text-kite-text-muted uppercase">Verified</span>
-              <div className={`mt-1 ${address.is_verified ? "text-green-400" : "text-kite-text-muted"}`}>{address.is_verified ? "Yes" : "No"}</div>
-            </div>
-            <div>
-              <span className="text-[11px] text-kite-text-muted uppercase">Has Proxy</span>
-              <div className="text-kite-text mt-1">{address.has_methods_read_proxy || address.has_methods_write_proxy ? "Yes" : "No"}</div>
-            </div>
+        <div className="space-y-4">
+          {/* Contract sub-tabs */}
+          <div className="flex gap-1 bg-kite-surface rounded-[10px] border border-kite-border p-1 w-fit">
+            {(["info", "read", "write"] as const).map((sub) => (
+              <button
+                key={sub}
+                onClick={() => setContractSubTab(sub)}
+                className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all capitalize ${
+                  contractSubTab === sub
+                    ? "bg-kite-gold-faint text-kite-gold shadow-sm"
+                    : "text-kite-text-secondary hover:text-kite-text hover:bg-kite-surface-hover"
+                }`}
+              >
+                {sub === "info" ? "Overview" : sub === "read" ? `Read (${readMethods.length})` : `Write (${writeMethods.length})`}
+              </button>
+            ))}
           </div>
+
+          {/* Contract Overview */}
+          {contractSubTab === "info" && (
+            <div className="bg-kite-surface rounded-[14px] border border-kite-border p-5">
+              <h3 className="text-sm font-semibold text-kite-text mb-4">Contract Information</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-[11px] text-kite-text-muted uppercase">Read Methods</span>
+                  <div className="text-kite-text mt-1 font-mono">{readMethods.length > 0 ? readMethods.length : address.has_methods_read ? "Yes" : "No"}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] text-kite-text-muted uppercase">Write Methods</span>
+                  <div className="text-kite-text mt-1 font-mono">{writeMethods.length > 0 ? writeMethods.length : address.has_methods_write ? "Yes" : "No"}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] text-kite-text-muted uppercase">Verified</span>
+                  <div className={`mt-1 font-semibold ${address.is_verified ? "text-green-400" : "text-kite-text-muted"}`}>{address.is_verified ? "Yes" : "No"}</div>
+                </div>
+                <div>
+                  <span className="text-[11px] text-kite-text-muted uppercase">Proxy</span>
+                  <div className="text-kite-text mt-1">{address.has_methods_read_proxy || address.has_methods_write_proxy ? "Yes" : "No"}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Read Methods */}
+          {contractSubTab === "read" && (
+            <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
+              {readMethods.length === 0 ? (
+                <div className="p-10 text-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-kite-text-muted/40 mx-auto mb-3">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <div className="text-kite-text-secondary text-sm mb-1">No read methods available</div>
+                  <div className="text-kite-text-muted text-xs">Contract ABI must be verified to expose read methods.</div>
+                </div>
+              ) : (
+                <div className="divide-y divide-kite-border/15">
+                  {readMethods.map((m, idx) => (
+                    <div key={m.method_id || idx} className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[11px] font-mono text-kite-text-muted bg-kite-bg px-2 py-0.5 rounded border border-kite-border">{idx + 1}</span>
+                        <span className="text-[13px] font-mono font-semibold text-kite-text">{m.name}</span>
+                        {m.stateMutability && (
+                          <span className="text-[10px] text-blue-400 bg-blue-400/10 px-1.5 py-px rounded border border-blue-400/20">{m.stateMutability}</span>
+                        )}
+                      </div>
+                      {m.inputs.length > 0 && (
+                        <div className="ml-8 space-y-1.5 mb-2">
+                          {m.inputs.map((inp, i) => (
+                            <div key={i} className="flex items-center gap-2 text-[12px]">
+                              <span className="text-kite-text-muted font-mono">{inp.name}</span>
+                              <span className="text-kite-text-muted/50">:</span>
+                              <span className="text-kite-gold-dim font-mono">{inp.type}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {m.outputs.length > 0 && (
+                        <div className="ml-8 flex items-center gap-1.5 text-[11px]">
+                          <span className="text-kite-text-muted">&rarr;</span>
+                          {m.outputs.map((out, i) => (
+                            <span key={i} className="text-green-400/70 font-mono">{out.type}{out.name ? ` ${out.name}` : ""}{i < m.outputs.length - 1 ? "," : ""}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Write Methods */}
+          {contractSubTab === "write" && (
+            <div className="bg-kite-surface rounded-[14px] border border-kite-border overflow-hidden">
+              {writeMethods.length === 0 ? (
+                <div className="p-10 text-center">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-kite-text-muted/40 mx-auto mb-3">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <div className="text-kite-text-secondary text-sm mb-1">No write methods available</div>
+                  <div className="text-kite-text-muted text-xs">Contract ABI must be verified to expose write methods.</div>
+                </div>
+              ) : (
+                <div className="divide-y divide-kite-border/15">
+                  {writeMethods.map((m, idx) => (
+                    <div key={m.method_id || idx} className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[11px] font-mono text-kite-text-muted bg-kite-bg px-2 py-0.5 rounded border border-kite-border">{idx + 1}</span>
+                        <span className="text-[13px] font-mono font-semibold text-kite-text">{m.name}</span>
+                        {m.stateMutability && (
+                          <span className="text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-px rounded border border-orange-400/20">{m.stateMutability}</span>
+                        )}
+                      </div>
+                      {m.inputs.length > 0 && (
+                        <div className="ml-8 space-y-1.5">
+                          {m.inputs.map((inp, i) => (
+                            <div key={i} className="flex items-center gap-2 text-[12px]">
+                              <span className="text-kite-text-muted font-mono">{inp.name}</span>
+                              <span className="text-kite-text-muted/50">:</span>
+                              <span className="text-kite-gold-dim font-mono">{inp.type}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
