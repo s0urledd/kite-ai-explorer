@@ -15,8 +15,8 @@
     --kite-bg: #09090B;
     --kite-surface: #111113;
     --kite-surface-hover: #19180F;
-    --kite-border: #131210;
-    --kite-border-light: #1A1914;
+    --kite-border: transparent;
+    --kite-border-light: transparent;
     --kite-text: #F5F0E8;
     --kite-text-secondary: #D8D3CB;
     --kite-text-muted: #5C574E;
@@ -51,7 +51,7 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--kite-border);
+    background-color: #1E1D18;
     border-radius: 9999px;
   }
 }
