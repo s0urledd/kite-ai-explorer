@@ -47,7 +47,7 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
                     {n.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-kite-text-muted">
+                <div className="flex items-center gap-1.5 text-[11px] text-white">
                   <span>{tc} txns</span>
                   <span className="text-kite-text-muted/50">&middot;</span>
                   <span>{pct}% gas</span>
@@ -58,7 +58,7 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
 
               {/* Time */}
               <div className="text-right flex-shrink-0">
-                <div className="text-[11px] text-kite-text-muted">{timeAgo(ts.toString())} ago</div>
+                <div className="text-[11px] text-white">{timeAgo(ts.toString())} ago</div>
               </div>
             </Link>
           );

@@ -35,13 +35,13 @@ export function GasChart({ data }: GasChartProps) {
             </defs>
             <XAxis
               dataKey="t"
-              tick={{ fill: "#5C574E", fontSize: 10 }}
+              tick={{ fill: "#FFFFFF", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fill: "#5C574E", fontSize: 10 }}
+              tick={{ fill: "#FFFFFF", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
             />

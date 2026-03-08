@@ -30,7 +30,7 @@ export function ActiveContracts({ contracts }: ActiveContractsProps) {
       </div>
 
       {/* Header */}
-      <div className="grid grid-cols-[auto_1fr_140px_140px] gap-4 px-5 py-2.5 border-b border-transparent text-[11px] text-kite-text-muted font-semibold uppercase tracking-wider">
+      <div className="grid grid-cols-[auto_1fr_140px_140px] gap-4 px-5 py-2.5 border-b border-transparent text-[11px] text-white font-semibold uppercase tracking-wider">
         <span className="w-6">#</span>
         <span>Contract Address</span>
         <span className="text-right">Unique Callers</span>
