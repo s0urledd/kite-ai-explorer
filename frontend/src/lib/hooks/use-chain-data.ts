@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { rpc, hex, gwei, type RpcBlock, type RpcTransaction } from "@/lib/api/rpc";
+import { blockscout } from "@/lib/api/blockscout";
+import type { ChainStats } from "@/lib/types/api";
 
 export interface ChainData {
   blockNumber: number;
@@ -16,6 +18,8 @@ export interface ChainData {
   peakTps: number;
   contracts: { address: string; calls: number; callers: number }[];
   addressCount: number;
+  // Blockscout real stats
+  chainStats: ChainStats | null;
 }
 
 const INITIAL: ChainData = {
@@ -31,6 +35,7 @@ const INITIAL: ChainData = {
   peakTps: 0,
   contracts: [],
   addressCount: 0,
+  chainStats: null,
 };
 
 export function useChainData(pollInterval = 10000) {
@@ -38,9 +43,11 @@ export function useChainData(pollInterval = 10000) {
   const addrs = useRef(new Set<string>());
 
   const load = useCallback(async () => {
-    const [bnH, gpH] = await Promise.all([
+    // Fetch RPC data and Blockscout stats in parallel
+    const [bnH, gpH, stats] = await Promise.all([
       rpc<string>("eth_blockNumber"),
       rpc<string>("eth_gasPrice"),
+      blockscout.getStats().catch(() => null),
     ]);
     const bn = hex(bnH);
     const gp = gwei(gpH);
@@ -104,13 +111,14 @@ export function useChainData(pollInterval = 10000) {
       blocks: bks.slice(0, 8),
       txHistory: txH,
       gasHistory: gasH,
-      totalTx: tot,
-      avgBlockTime: avgBt,
-      utilization: util,
+      totalTx: stats ? parseInt(stats.total_transactions || "0") : tot,
+      avgBlockTime: stats ? stats.average_block_time / 1000 : avgBt,
+      utilization: stats ? stats.network_utilization_percentage : util,
       tps: tpsValues.reduce((a, b) => a + b, 0) / (tpsValues.length || 1),
       peakTps: Math.max(...tpsValues),
       contracts,
-      addressCount: addrs.current.size,
+      addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
+      chainStats: stats,
     });
   }, []);
 
