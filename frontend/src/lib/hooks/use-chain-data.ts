@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { rpc, hex, gwei, type RpcBlock, type RpcTransaction } from "@/lib/api/rpc";
+import { blockscout } from "@/lib/api/blockscout";
+import type { ChainStats } from "@/lib/types/api";
 
 export interface ChainData {
   blockNumber: number;
@@ -16,6 +18,8 @@ export interface ChainData {
   peakTps: number;
   contracts: { address: string; calls: number; callers: number }[];
   addressCount: number;
+  // Blockscout real stats
+  chainStats: ChainStats | null;
 }
 
 const INITIAL: ChainData = {
@@ -31,6 +35,7 @@ const INITIAL: ChainData = {
   peakTps: 0,
   contracts: [],
   addressCount: 0,
+  chainStats: null,
 };
 
 export function useChainData(pollInterval = 10000) {
@@ -38,9 +43,11 @@ export function useChainData(pollInterval = 10000) {
   const addrs = useRef(new Set<string>());
 
   const load = useCallback(async () => {
-    const [bnH, gpH] = await Promise.all([
+    // Fetch RPC data and Blockscout stats in parallel
+    const [bnH, gpH, stats] = await Promise.all([
       rpc<string>("eth_blockNumber"),
       rpc<string>("eth_gasPrice"),
+      blockscout.getStats().catch(() => null),
     ]);
     const bn = hex(bnH);
     const gp = gwei(gpH);
@@ -92,21 +99,11 @@ export function useChainData(pollInterval = 10000) {
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // Calculate TPS using all block pairs with valid time deltas
-    const tpsValues: number[] = [];
-    for (let i = 0; i < bks.length - 1; i++) {
-      const dt = hex(bks[i].timestamp) - hex(bks[i + 1].timestamp);
-      if (dt > 0) {
-        const txCount = ((bks[i].transactions as RpcTransaction[])?.length || 0);
-        tpsValues.push(txCount / dt);
-      }
-    }
-
-    // Calculate average TPS over all valid pairs, and peak TPS
-    const avgTps = tpsValues.length > 0
-      ? tpsValues.reduce((a, b) => a + b, 0) / tpsValues.length
-      : 0;
-    const peakTps = tpsValues.length > 0 ? Math.max(...tpsValues) : 0;
+    const tpsValues = bks.slice(0, 5).map((b, i) => {
+      if (i >= bks.length - 1) return 0;
+      const dt = hex(b.timestamp) - hex(bks[i + 1]?.timestamp || b.timestamp);
+      return dt > 0 ? ((b.transactions as RpcTransaction[])?.length || 0) / dt : 0;
+    });
 
     setData({
       blockNumber: bn,
@@ -114,13 +111,14 @@ export function useChainData(pollInterval = 10000) {
       blocks: bks.slice(0, 8),
       txHistory: txH,
       gasHistory: gasH,
-      totalTx: tot,
-      avgBlockTime: avgBt,
-      utilization: util,
-      tps: avgTps,
-      peakTps,
+      totalTx: stats ? parseInt(stats.total_transactions || "0") : tot,
+      avgBlockTime: stats ? stats.average_block_time / 1000 : avgBt,
+      utilization: stats ? stats.network_utilization_percentage : util,
+      tps: tpsValues.reduce((a, b) => a + b, 0) / (tpsValues.length || 1),
+      peakTps: Math.max(...tpsValues),
       contracts,
-      addressCount: addrs.current.size,
+      addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
+      chainStats: stats,
     });
   }, []);
 

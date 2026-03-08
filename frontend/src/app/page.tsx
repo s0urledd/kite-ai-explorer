@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useChainData } from "@/lib/hooks/use-chain-data";
-import { useBlockscoutStats } from "@/lib/hooks/use-blockscout-stats";
+import { useChartData, type TimeRange } from "@/lib/hooks/use-chart-data";
 import { SearchBar } from "@/components/layout/search-bar";
 import { StatStrip } from "@/components/dashboard/stat-strip";
 import { LatestBlocks } from "@/components/dashboard/latest-blocks";
@@ -12,18 +13,25 @@ import { ActiveContracts } from "@/components/dashboard/active-contracts";
 
 export default function DashboardPage() {
   const data = useChainData();
-  const { stats: blockscoutStats } = useBlockscoutStats();
+  const [txRange, setTxRange] = useState<TimeRange>("1H");
+  const [gasRange, setGasRange] = useState<TimeRange>("1H");
+
+  const txChart = useChartData(data.blockNumber, txRange);
+  const gasChart = useChartData(data.blockNumber, gasRange);
+
+  const txChartData = txRange === "1H" ? data.txHistory : txChart.txData;
+  const gasChartData = gasRange === "1H" ? data.gasHistory : gasChart.gasData;
 
   return (
     <div>
       <SearchBar />
-      <StatStrip data={data} blockscoutStats={blockscoutStats} />
+      <StatStrip data={data} />
 
       <div className="max-w-[1280px] mx-auto px-6 py-4 flex flex-col gap-3.5">
-        {/* Charts Row - instant data overview */}
+        {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-          <TxChart data={data.txHistory} />
-          <GasChart data={data.gasHistory} />
+          <TxChart data={txChartData} onRangeChange={setTxRange} />
+          <GasChart data={gasChartData} onRangeChange={setGasRange} />
         </div>
 
         {/* Latest Blocks & Transactions */}
