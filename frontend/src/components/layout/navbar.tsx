@@ -30,7 +30,6 @@ export function Navbar() {
         {/* Left */}
         <div className="flex items-center gap-3">
           <KiteLogo size={26} />
-          <span className="text-lg font-bold text-kite-text tracking-wide">Kite</span>
 
           {/* Price badge */}
           {priceNum > 0 && (
