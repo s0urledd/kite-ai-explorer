@@ -33,7 +33,7 @@ class BlockscoutClient {
     if (params) {
       Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     }
-    const res = await fetch(url.toString(), { next: { revalidate: 5 } });
+    const res = await fetch(url.toString(), { cache: "no-store" });
     if (!res.ok) {
       throw new Error(`Blockscout API error: ${res.status} ${res.statusText}`);
     }
