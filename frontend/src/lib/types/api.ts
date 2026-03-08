@@ -45,7 +45,8 @@ export interface Block {
 /** GET /api/v2/transactions */
 export interface Transaction {
   hash: string;
-  block: number;
+  block: number | null;
+  block_number: number | null;
   timestamp: string;
   from: AddressParam;
   to: AddressParam | null;
