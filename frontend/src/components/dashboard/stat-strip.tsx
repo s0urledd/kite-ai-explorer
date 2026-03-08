@@ -103,8 +103,8 @@ export function StatStrip({ data }: StatStripProps) {
             <div className="pt-2.5 space-y-1.5">
               {card.rows.map((row) => (
                 <div key={row.label} className="flex items-center justify-between">
-                  <span className="text-[11px] text-kite-text-muted">{row.label}</span>
-                  <span className="text-[12px] font-mono font-semibold text-kite-text-secondary">{row.value}</span>
+                  <span className="text-[11px] text-white">{row.label}</span>
+                  <span className="text-[12px] font-mono font-semibold text-white">{row.value}</span>
                 </div>
               ))}
             </div>

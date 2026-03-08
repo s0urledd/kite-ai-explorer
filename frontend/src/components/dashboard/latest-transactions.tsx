@@ -65,7 +65,7 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-kite-text-muted">
+                <div className="flex items-center gap-1 text-[11px] text-white">
                   <span className="font-mono text-kite-text-secondary">{shortenHash(tx.from, 4)}</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="flex-shrink-0 text-kite-text-muted">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -79,7 +79,7 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
                 <div className="text-[13px] font-semibold font-mono text-kite-text whitespace-nowrap">
                   {val === 0 ? "0" : (val / 1e18).toFixed(4)} <span className="text-kite-text-secondary text-[11px] font-normal">KITE</span>
                 </div>
-                <div className="text-[11px] text-kite-text-muted mt-0.5">
+                <div className="text-[11px] text-white mt-0.5">
                   {timeAgo(tx._ts.toString())} ago
                 </div>
               </div>
