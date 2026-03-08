@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatedNumber } from "@/components/common/animated-number";
+import { KiteLogo } from "@/components/common/kite-logo";
 import type { ChainData } from "@/lib/hooks/use-chain-data";
 import { useKitePrice } from "@/lib/hooks/use-kite-price";
 
@@ -17,8 +18,10 @@ export function StatStrip({ data }: StatStripProps) {
   const cards = [
     {
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-kite-text-muted">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M7 10h10l-3-3"/>
+          <path d="M17 14H7l3 3"/>
         </svg>
       ),
       title: "Total Txn",
@@ -30,9 +33,7 @@ export function StatStrip({ data }: StatStripProps) {
     },
     {
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
+        <span className="text-[14px] leading-none">⏹</span>
       ),
       title: "Current Block",
       main: <span className="text-xl font-bold font-mono text-kite-text">#<AnimatedNumber value={data.blockNumber} /></span>,
@@ -43,9 +44,7 @@ export function StatStrip({ data }: StatStripProps) {
     },
     {
       icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-kite-text-muted">
-          <circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10l4-4 4 4"/>
-        </svg>
+        <KiteLogo size={16} />
       ),
       title: "KITE Price",
       main: (
