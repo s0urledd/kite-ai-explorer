@@ -41,7 +41,7 @@ export default function TxDetailPage() {
   const rows: [string, React.ReactNode][] = [
     ["Tx Hash", <span key="h" className="font-mono text-xs break-all">{tx.hash}</span>],
     ["Status", <span key="s" className={`font-semibold ${txStatusColor(tx.status)}`}>{txStatusLabel(tx.status)}</span>],
-    ["Block", <Link key="b" href={`/block/${tx.block}`} className="text-kite-gold hover:underline font-mono">{tx.block}</Link>],
+    ["Block", (tx.block ?? tx.block_number) ? <Link key="b" href={`/block/${tx.block ?? tx.block_number}`} className="text-kite-gold hover:underline font-mono">{tx.block ?? tx.block_number}</Link> : <span key="b" className="text-kite-text-muted">Pending</span>],
     ["Timestamp", new Date(tx.timestamp).toLocaleString()],
     ["From", <Link key="f" href={`/address/${tx.from?.hash}`} className="font-mono text-xs text-kite-gold hover:underline break-all">{tx.from?.hash}</Link>],
     ["To", tx.to ? <Link key="t" href={`/address/${tx.to.hash}`} className="font-mono text-xs text-kite-gold hover:underline break-all">{tx.to.hash}{tx.to.is_contract ? " (Contract)" : ""}</Link> : <span key="t" className="text-kite-text-muted">Contract Creation</span>],

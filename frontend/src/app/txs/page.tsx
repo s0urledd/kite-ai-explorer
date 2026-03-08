@@ -102,9 +102,13 @@ export default function TransactionsPage() {
                 {method.length > 10 ? method.slice(0, 10) + "…" : method}
               </span>
 
-              <Link href={`/block/${tx.block}`} className="text-[13px] font-mono text-kite-text-secondary hover:text-kite-gold">
-                {tx.block}
-              </Link>
+              {(tx.block ?? tx.block_number) ? (
+                <Link href={`/block/${tx.block ?? tx.block_number}`} className="text-[13px] font-mono text-kite-text-secondary hover:text-kite-gold">
+                  {tx.block ?? tx.block_number}
+                </Link>
+              ) : (
+                <span className="text-[13px] text-kite-text-muted">—</span>
+              )}
 
               <div className="flex items-center gap-1 min-w-0">
                 <Link href={`/address/${tx.from?.hash}`} className="text-[12px] font-mono text-kite-text-secondary hover:text-kite-gold truncate">

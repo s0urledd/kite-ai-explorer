@@ -37,7 +37,7 @@ export default function BlockDetailPage() {
   const rows: [string, React.ReactNode][] = [
     ["Block Height", <span key="h" className="font-mono text-kite-gold">{formatNumber(block.height)}</span>],
     ["Timestamp", new Date(block.timestamp).toLocaleString()],
-    ["Transactions", `${block.tx_count} transactions`],
+    ["Transactions", `${block.tx_count ?? txs.length} transactions`],
     ["Validator", <Link key="v" href={`/address/${block.miner?.hash}`} className="font-mono text-kite-gold hover:underline">{block.miner?.hash}</Link>],
     ["Size", `${formatNumber(block.size)} bytes`],
     ["Gas Used", formatNumber(block.gas_used)],
