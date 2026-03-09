@@ -13,25 +13,7 @@ interface ChartPoint {
 
 const SAMPLES_PER_WINDOW = 3;
 
-// Dynamically calculate block time from 2 recent blocks
-async function estimateBlockTime(latestBlock: number): Promise<number> {
-  try {
-    const gap = 10; // check blocks 10 apart for a better average
-    const [b1, b2] = await Promise.all([
-      rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + latestBlock.toString(16), false]),
-      rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + Math.max(0, latestBlock - gap).toString(16), false]),
-    ]);
-    if (b1 && b2) {
-      const t1 = hex(b1.timestamp);
-      const t2 = hex(b2.timestamp);
-      const diff = t1 - t2;
-      if (diff > 0) return diff / gap;
-    }
-  } catch { /* fallback */ }
-  return 2; // fallback default
-}
-
-function getRangeConfig(blockTime: number) {
+function getRangeConfig() {
   return {
     "24H": {
       windows: 24,
@@ -51,15 +33,14 @@ function getRangeConfig(blockTime: number) {
   };
 }
 
-export function useChartData(latestBlock: number, range: TimeRange) {
+export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime: number) {
   const [txData, setTxData] = useState<ChartPoint[]>([]);
   const [gasData, setGasData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const lastKey = useRef("");
-  const blockTimeCache = useRef<number>(0);
 
   const load = useCallback(async () => {
-    if (latestBlock <= 0) return;
+    if (latestBlock <= 0 || avgBlockTime <= 0) return;
 
     // Debounce: only re-fetch when block changes significantly
     const key = `${range}-${Math.floor(latestBlock / 50)}`;
@@ -69,16 +50,11 @@ export function useChartData(latestBlock: number, range: TimeRange) {
     setLoading(true);
 
     try {
-      // Estimate actual block time if not cached
-      if (blockTimeCache.current <= 0) {
-        blockTimeCache.current = await estimateBlockTime(latestBlock);
-      }
-      const blockTime = blockTimeCache.current;
+      const blockTime = avgBlockTime;
 
-      const configs = getRangeConfig(blockTime);
+      const configs = getRangeConfig();
       const config = configs[range];
       const blocksPerWindow = Math.max(1, Math.round(config.secondsPerWindow / blockTime));
-      const totalBlocksNeeded = config.windows * blocksPerWindow;
 
       // If chain is younger than requested range, adjust window count
       const actualWindows = Math.min(
@@ -99,7 +75,6 @@ export function useChartData(latestBlock: number, range: TimeRange) {
         actualWindows,
         blocksPerWindow,
         config.label,
-        blockTime,
       );
 
       setTxData(blockscoutTxData && blockscoutTxData.length > 2 ? blockscoutTxData : rpcData.tx);
@@ -109,7 +84,7 @@ export function useChartData(latestBlock: number, range: TimeRange) {
     }
 
     setLoading(false);
-  }, [latestBlock, range]);
+  }, [latestBlock, range, avgBlockTime]);
 
   useEffect(() => {
     load();
@@ -151,14 +126,12 @@ async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | nu
 
 /**
  * RPC sampling: fetch a few blocks per time window, extrapolate tx count & avg gas.
- * Works for all ranges and always provides both tx and gas data.
  */
 async function loadRpcSampledData(
   latestBlock: number,
   windows: number,
   blocksPerWindow: number,
   labelFmt: Intl.DateTimeFormatOptions,
-  blockTime: number,
 ): Promise<{ tx: ChartPoint[]; gas: ChartPoint[] }> {
   // Build sample list: for each window, pick SAMPLES_PER_WINDOW evenly spaced blocks
   const samples: { window: number; blockNum: number }[] = [];
@@ -210,11 +183,9 @@ async function loadRpcSampledData(
     const blocks = windowBlocks[w];
     if (!blocks || blocks.length === 0) continue;
 
-    // TX count: for blocks fetched without full tx objects, use transactionCount if available
+    // TX count: transactions is hash array when fetched with false
     const sampledTx = blocks.reduce((sum, b) => {
       if (Array.isArray(b.transactions)) return sum + b.transactions.length;
-      // transactions might be hash array when fetched with false
-      if (b.transactions) return sum + (b.transactions as unknown as string[]).length;
       return sum;
     }, 0);
     const estimatedTx = Math.round((sampledTx / blocks.length) * blocksPerWindow);
