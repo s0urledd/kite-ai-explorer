@@ -16,8 +16,8 @@ export default function DashboardPage() {
   const [txRange, setTxRange] = useState<TimeRange>("24H");
   const [gasRange, setGasRange] = useState<TimeRange>("24H");
 
-  const txChart = useChartData(data.blockNumber, txRange);
-  const gasChart = useChartData(data.blockNumber, gasRange);
+  const txChart = useChartData(data.blockNumber, txRange, data.avgBlockTime);
+  const gasChart = useChartData(data.blockNumber, gasRange, data.avgBlockTime);
 
   return (
     <div>
