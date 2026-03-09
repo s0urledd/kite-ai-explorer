@@ -10,16 +10,18 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { ChartTooltip } from "./chart-tooltip";
-
-type TimeRange = "1H" | "24H" | "1W";
+import type { TimeRange } from "@/lib/hooks/use-chart-data";
 
 interface TxChartProps {
   data: { t: string; v: number }[];
+  loading?: boolean;
   onRangeChange?: (range: TimeRange) => void;
 }
 
-export function TxChart({ data, onRangeChange }: TxChartProps) {
-  const [range, setRange] = useState<TimeRange>("1H");
+const RANGES: TimeRange[] = ["24H", "1W", "1M"];
+
+export function TxChart({ data, loading, onRangeChange }: TxChartProps) {
+  const [range, setRange] = useState<TimeRange>("24H");
 
   const handleRange = (r: TimeRange) => {
     setRange(r);
@@ -31,7 +33,7 @@ export function TxChart({ data, onRangeChange }: TxChartProps) {
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-transparent">
         <span className="text-sm font-semibold text-kite-text">Transaction Activity</span>
         <div className="flex items-center gap-1">
-          {(["1H", "24H", "1W"] as TimeRange[]).map((r) => (
+          {RANGES.map((r) => (
             <button
               key={r}
               onClick={() => handleRange(r)}
@@ -47,7 +49,12 @@ export function TxChart({ data, onRangeChange }: TxChartProps) {
         </div>
       </div>
 
-      <div className="px-2 pb-2 h-[220px]">
+      <div className="px-2 pb-2 h-[220px] relative">
+        {loading && data.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center text-kite-text-muted text-xs">
+            Loading...
+          </div>
+        )}
         <ResponsiveContainer>
           <AreaChart data={data} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
             <defs>
@@ -76,6 +83,7 @@ export function TxChart({ data, onRangeChange }: TxChartProps) {
               strokeWidth={2}
               fill="url(#txGrad)"
               dot={false}
+              animationDuration={500}
             />
           </AreaChart>
         </ResponsiveContainer>

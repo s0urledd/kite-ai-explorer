@@ -4,45 +4,83 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { rpc, hex, type RpcBlock } from "@/lib/api/rpc";
 import { blockscout } from "@/lib/api/blockscout";
 
-export type TimeRange = "1H" | "24H" | "1W";
+export type TimeRange = "24H" | "1W" | "1M";
 
 interface ChartPoint {
   t: string;
   v: number;
 }
 
-// For 1H: fetch recent blocks and aggregate into ~5min windows
-const HOUR_BLOCKS = 1800; // ~1h worth of blocks at 2s/block
-const HOUR_WINDOW_SIZE = 150; // ~5 min window (150 blocks × 2s)
-const HOUR_WINDOWS = 12; // 12 windows = 60 min
+// Block time ~2s on KiteAI
+const BLOCK_TIME = 2;
+
+// Window configs for each range
+const RANGE_CONFIG: Record<TimeRange, { windows: number; secondsPerWindow: number; label: Intl.DateTimeFormatOptions }> = {
+  "24H": {
+    windows: 24,
+    secondsPerWindow: 3600, // 1 hour
+    label: { hour: "2-digit", minute: "2-digit" },
+  },
+  "1W": {
+    windows: 14,
+    secondsPerWindow: 43200, // 12 hours
+    label: { month: "short", day: "numeric" },
+  },
+  "1M": {
+    windows: 30,
+    secondsPerWindow: 86400, // 1 day
+    label: { month: "short", day: "numeric" },
+  },
+};
+
+const SAMPLES_PER_WINDOW = 3;
 
 export function useChartData(latestBlock: number, range: TimeRange) {
   const [txData, setTxData] = useState<ChartPoint[]>([]);
   const [gasData, setGasData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
-  const lastKey = useRef<string>("");
+  const lastKey = useRef("");
 
   const load = useCallback(async () => {
     if (latestBlock <= 0) return;
-    const key = `${range}-${Math.floor(latestBlock / 10)}`;
+
+    // Debounce: only re-fetch when block changes significantly
+    const key = `${range}-${Math.floor(latestBlock / 50)}`;
     if (key === lastKey.current) return;
     lastKey.current = key;
 
     setLoading(true);
 
     try {
-      if (range === "1H") {
-        await loadHourData(latestBlock, setTxData, setGasData);
-      } else {
-        // Try Blockscout aggregated chart data first
-        const used = await loadBlockscoutChartData(range, setTxData, setGasData);
-        if (!used) {
-          // Fallback: sample blocks but aggregate into windows
-          await loadSampledData(latestBlock, range, setTxData, setGasData);
-        }
+      const config = RANGE_CONFIG[range];
+      const blocksPerWindow = Math.round(config.secondsPerWindow / BLOCK_TIME);
+      const totalBlocksNeeded = config.windows * blocksPerWindow;
+
+      // If chain is younger than requested range, adjust window count
+      const actualWindows = Math.min(
+        config.windows,
+        Math.max(1, Math.floor(latestBlock / blocksPerWindow))
+      );
+
+      // Try Blockscout chart data for TX (1W/1M get better data from daily aggregation)
+      let blockscoutTxData: ChartPoint[] | null = null;
+      if (range !== "24H") {
+        blockscoutTxData = await loadBlockscoutTxData(range);
       }
+
+      // Always load gas data from RPC sampling (Blockscout doesn't provide gas charts)
+      // Also load tx data from RPC if Blockscout failed
+      const rpcData = await loadRpcSampledData(
+        latestBlock,
+        actualWindows,
+        blocksPerWindow,
+        config.label,
+      );
+
+      setTxData(blockscoutTxData && blockscoutTxData.length > 2 ? blockscoutTxData : rpcData.tx);
+      setGasData(rpcData.gas);
     } catch {
-      // Silent fail - keep previous data
+      // Keep previous data on error
     }
 
     setLoading(false);
@@ -56,198 +94,104 @@ export function useChartData(latestBlock: number, range: TimeRange) {
 }
 
 /**
- * 1H view: Fetch blocks and aggregate into 5-minute windows
- * Instead of showing tx per individual block, shows total txs per window
+ * Try Blockscout /stats/charts/transactions for tx data.
+ * Returns daily aggregated tx counts - accurate for 1W/1M.
  */
-async function loadHourData(
-  latestBlock: number,
-  setTx: (d: ChartPoint[]) => void,
-  setGas: (d: ChartPoint[]) => void,
-) {
-  // Sample one block per window boundary to get timestamps, plus count txs
-  // Fetch boundary blocks + a few samples per window for accuracy
-  const windowBoundaries: number[] = [];
-  for (let i = 0; i < HOUR_WINDOWS; i++) {
-    const startBlock = latestBlock - (HOUR_WINDOWS - i) * HOUR_WINDOW_SIZE;
-    if (startBlock >= 0) windowBoundaries.push(startBlock);
-  }
-
-  // Fetch boundary blocks for timestamps
-  const boundaryResults = await Promise.all(
-    windowBoundaries.map((n) =>
-      rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + n.toString(16), false]).catch(() => null)
-    )
-  );
-
-  // For each window, sample a few blocks to estimate tx count
-  const SAMPLES_PER_WINDOW = 10;
-  const txPoints: ChartPoint[] = [];
-  const gasPoints: ChartPoint[] = [];
-
-  for (let w = 0; w < windowBoundaries.length; w++) {
-    const windowStart = windowBoundaries[w];
-    const windowEnd = windowStart + HOUR_WINDOW_SIZE;
-    const boundary = boundaryResults[w];
-    if (!boundary) continue;
-
-    // Sample evenly spaced blocks within window
-    const sampleStep = Math.max(1, Math.floor(HOUR_WINDOW_SIZE / SAMPLES_PER_WINDOW));
-    const sampleNums: number[] = [];
-    for (let s = 0; s < SAMPLES_PER_WINDOW; s++) {
-      const num = windowStart + s * sampleStep;
-      if (num <= windowEnd && num <= latestBlock) sampleNums.push(num);
-    }
-
-    const samples = await Promise.all(
-      sampleNums.map((n) =>
-        rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + n.toString(16), false]).catch(() => null)
-      )
-    );
-
-    const validSamples = samples.filter(Boolean) as RpcBlock[];
-    if (validSamples.length === 0) continue;
-
-    // Estimate total txs in window: (avg tx per sampled block) × window size
-    const totalSampledTx = validSamples.reduce(
-      (sum, b) => sum + (Array.isArray(b.transactions) ? b.transactions.length : 0),
-      0
-    );
-    const estimatedWindowTx = Math.round(
-      (totalSampledTx / validSamples.length) * HOUR_WINDOW_SIZE
-    );
-
-    // Gas: average gas utilization across samples
-    const gasUtils = validSamples.map((b) => {
-      const gu = hex(b.gasUsed);
-      const gl = hex(b.gasLimit);
-      return gl > 0 ? (gu / gl) * 100 : 0;
-    });
-    const avgGas = gasUtils.reduce((a, b) => a + b, 0) / gasUtils.length;
-
-    const ts = hex(boundary.timestamp);
-    const label = new Date(ts * 1000).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    txPoints.push({ t: label, v: estimatedWindowTx });
-    gasPoints.push({ t: label, v: parseFloat(avgGas.toFixed(1)) });
-  }
-
-  setTx(txPoints);
-  setGas(gasPoints);
-}
-
-/**
- * Use Blockscout's /stats/charts/transactions for 24H/1W
- * Returns daily aggregated tx counts - much more accurate
- */
-async function loadBlockscoutChartData(
-  range: TimeRange,
-  setTx: (d: ChartPoint[]) => void,
-  setGas: (d: ChartPoint[]) => void,
-): Promise<boolean> {
+async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | null> {
   try {
     const chartData = await blockscout.getTransactionCharts();
-    if (!chartData?.chart_data?.length) return false;
+    if (!chartData?.chart_data?.length) return null;
 
-    const days = range === "24H" ? 1 : 7;
+    const days = range === "1W" ? 7 : 30;
     const now = new Date();
     const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    const filtered = chartData.chart_data.filter((d) => new Date(d.date) >= cutoff);
+    const filtered = chartData.chart_data
+      .filter((d) => new Date(d.date) >= cutoff)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    if (filtered.length === 0) return false;
+    if (filtered.length < 2) return null;
 
-    const fmt: Intl.DateTimeFormatOptions =
-      range === "24H"
-        ? { hour: "2-digit", minute: "2-digit" }
-        : { month: "short", day: "numeric" };
-
-    const txPoints = filtered.map((d) => ({
-      t: new Date(d.date).toLocaleDateString([], fmt),
+    return filtered.map((d) => ({
+      t: new Date(d.date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       v: d.tx_count,
     }));
-
-    setTx(txPoints);
-
-    // Gas data not available from this endpoint - leave empty or use fallback
-    // We'll set gas to empty; the gas chart hook can handle this separately
-    setGas([]);
-    return true;
   } catch {
-    return false;
+    return null;
   }
 }
 
 /**
- * Fallback: sample blocks but aggregate into time windows
- * Instead of showing per-block tx, groups blocks into windows and sums txs
+ * RPC sampling: fetch a few blocks per time window, extrapolate tx count & avg gas.
+ * Works for all ranges and always provides both tx and gas data.
  */
-async function loadSampledData(
+async function loadRpcSampledData(
   latestBlock: number,
-  range: TimeRange,
-  setTx: (d: ChartPoint[]) => void,
-  setGas: (d: ChartPoint[]) => void,
-) {
-  // Config: how many windows and blocks per range
-  const config: Record<string, { windows: number; blocksPerWindow: number }> = {
-    "24H": { windows: 24, blocksPerWindow: 1800 }, // 24 hourly windows, 1800 blocks/hr
-    "1W": { windows: 28, blocksPerWindow: 10800 }, // 28 windows (~6hr each), 10800 blocks/window
-  };
+  windows: number,
+  blocksPerWindow: number,
+  labelFmt: Intl.DateTimeFormatOptions,
+): Promise<{ tx: ChartPoint[]; gas: ChartPoint[] }> {
+  // Build sample list: for each window, pick SAMPLES_PER_WINDOW evenly spaced blocks
+  const samples: { window: number; blockNum: number }[] = [];
 
-  const { windows, blocksPerWindow } = config[range] || config["24H"];
-  const SAMPLES_PER_WINDOW = 5;
-
-  const txPoints: ChartPoint[] = [];
-  const gasPoints: ChartPoint[] = [];
-
-  const fmt: Intl.DateTimeFormatOptions =
-    range === "24H"
-      ? { hour: "2-digit", minute: "2-digit" }
-      : { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" };
-
-  // Fetch all samples in parallel
-  const allSampleNums: { window: number; blockNum: number }[] = [];
   for (let w = 0; w < windows; w++) {
     const windowStart = latestBlock - (windows - w) * blocksPerWindow;
-    const sampleStep = Math.max(1, Math.floor(blocksPerWindow / SAMPLES_PER_WINDOW));
+    if (windowStart < 0) continue;
+
+    const step = Math.max(1, Math.floor(blocksPerWindow / SAMPLES_PER_WINDOW));
     for (let s = 0; s < SAMPLES_PER_WINDOW; s++) {
-      const num = windowStart + s * sampleStep;
+      const num = windowStart + s * step;
       if (num >= 0 && num <= latestBlock) {
-        allSampleNums.push({ window: w, blockNum: num });
+        samples.push({ window: w, blockNum: num });
       }
     }
   }
 
-  const allResults = await Promise.all(
-    allSampleNums.map((s) =>
-      rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + s.blockNum.toString(16), false]).catch(() => null)
-    )
-  );
+  // Fetch all sampled blocks in parallel (batched to avoid overwhelming RPC)
+  const BATCH_SIZE = 30;
+  const results: (RpcBlock | null)[] = new Array(samples.length).fill(null);
 
-  // Group results by window
-  const windowMap: Record<number, RpcBlock[]> = {};
-  allSampleNums.forEach((s, i) => {
-    const block = allResults[i];
+  for (let i = 0; i < samples.length; i += BATCH_SIZE) {
+    const batch = samples.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map((s) =>
+        rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + s.blockNum.toString(16), false]).catch(() => null)
+      )
+    );
+    batchResults.forEach((r, j) => {
+      results[i + j] = r;
+    });
+  }
+
+  // Group by window
+  const windowBlocks: Record<number, RpcBlock[]> = {};
+  samples.forEach((s, i) => {
+    const block = results[i];
     if (block) {
-      if (!windowMap[s.window]) windowMap[s.window] = [];
-      windowMap[s.window].push(block);
+      if (!windowBlocks[s.window]) windowBlocks[s.window] = [];
+      windowBlocks[s.window].push(block);
     }
   });
 
+  // Build chart points
+  const txPoints: ChartPoint[] = [];
+  const gasPoints: ChartPoint[] = [];
+
   for (let w = 0; w < windows; w++) {
-    const blocks = windowMap[w];
+    const blocks = windowBlocks[w];
     if (!blocks || blocks.length === 0) continue;
 
-    const totalSampledTx = blocks.reduce(
+    // TX: estimate total txs in window
+    const sampledTx = blocks.reduce(
       (sum, b) => sum + (Array.isArray(b.transactions) ? b.transactions.length : 0),
       0
     );
-    const estimatedWindowTx = Math.round(
-      (totalSampledTx / blocks.length) * blocksPerWindow
-    );
+    const estimatedTx = Math.round((sampledTx / blocks.length) * blocksPerWindow);
 
+    // Gas: average utilization across samples
     const gasUtils = blocks.map((b) => {
       const gu = hex(b.gasUsed);
       const gl = hex(b.gasLimit);
@@ -255,13 +199,13 @@ async function loadSampledData(
     });
     const avgGas = gasUtils.reduce((a, b) => a + b, 0) / gasUtils.length;
 
+    // Label from first block's timestamp
     const ts = hex(blocks[0].timestamp);
-    const label = new Date(ts * 1000).toLocaleDateString([], fmt);
+    const label = new Date(ts * 1000).toLocaleDateString("en-US", labelFmt);
 
-    txPoints.push({ t: label, v: estimatedWindowTx });
+    txPoints.push({ t: label, v: estimatedTx });
     gasPoints.push({ t: label, v: parseFloat(avgGas.toFixed(1)) });
   }
 
-  setTx(txPoints);
-  setGas(gasPoints);
+  return { tx: txPoints, gas: gasPoints };
 }
