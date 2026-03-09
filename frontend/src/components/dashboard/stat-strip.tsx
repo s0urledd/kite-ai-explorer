@@ -206,11 +206,11 @@ export function StatStrip({ data }: StatStripProps) {
               }}
             />
 
-            <div className="p-4 pt-5">
+            <div className="p-5 pt-5">
               {/* Header */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2.5 mb-2.5">
                 <div
-                  className="w-7 h-7 rounded-[8px] flex items-center justify-center flex-shrink-0"
+                  className="w-8 h-8 rounded-[8px] flex items-center justify-center flex-shrink-0"
                   style={{
                     backgroundColor: `${card.accentHex}12`,
                     color: card.accentHex,
@@ -219,19 +219,19 @@ export function StatStrip({ data }: StatStripProps) {
                 >
                   {card.icon}
                 </div>
-                <span className="text-xs text-kite-text-muted font-semibold uppercase tracking-wider">
+                <span className="text-[13px] text-white font-semibold uppercase tracking-wider">
                   {card.title}
                 </span>
               </div>
 
               {/* Separator under title */}
               <div
-                className="mb-3"
+                className="mb-3.5"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
               />
 
               {/* 2×2 metrics grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="grid grid-cols-2 gap-x-5 gap-y-3.5">
                 {card.metrics.map((m) => (
                   <div key={m.label}>
                     <div
@@ -240,7 +240,7 @@ export function StatStrip({ data }: StatStripProps) {
                     >
                       {m.label}
                     </div>
-                    <div className="text-sm font-mono font-semibold text-white">
+                    <div className="text-[15px] font-mono font-semibold text-white">
                       {m.value}
                     </div>
                   </div>
