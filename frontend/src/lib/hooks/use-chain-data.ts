@@ -126,15 +126,28 @@ export function useChainData(pollInterval = 10000) {
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // TPS: prefer Blockscout transactions_today for a stable 24h average
-    // Fallback: sample-based calculation from our 25 blocks
+    // ── Estimate transactions today (UTC) ──
+    // Blockscout's transactions_today actually shows YESTERDAY's count (Historian design).
+    // We calculate a live estimate: blocks since midnight UTC × avg tx/block from our sample.
+    const avgTxPerBlock = bks.length > 0 ? tot / bks.length : 0;
+    const latestTs = bks[0] ? hex(bks[0].timestamp) : 0;
+    const midnightUtc = latestTs > 0
+      ? Math.floor(new Date(latestTs * 1000).setUTCHours(0, 0, 0, 0) / 1000)
+      : 0;
+    const secondsSinceMidnight = latestTs > 0 ? latestTs - midnightUtc : 0;
+    const blockTimeSec = avgBt > 0 ? avgBt : 2;
+    const blocksSinceMidnight = Math.floor(secondsSinceMidnight / blockTimeSec);
+    const liveTransactionsToday = Math.round(blocksSinceMidnight * avgTxPerBlock);
+
+    // TPS: use live estimate for a stable 24h average
     const totalTimeSpan =
       bks.length >= 2
         ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
         : 0;
     const sampleTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
-    const txToday = stats ? parseInt(stats.transactions_today || "0") : 0;
-    const avgTps = txToday > 0 ? txToday / 86400 : sampleTps;
+    const avgTps = liveTransactionsToday > 0 && secondsSinceMidnight > 3600
+      ? liveTransactionsToday / secondsSinceMidnight
+      : sampleTps;
 
     // Peak TPS: use per-block peak (highest tx count / block time for that block)
     let peakTps = 0;
@@ -200,7 +213,7 @@ export function useChainData(pollInterval = 10000) {
       peakTps,
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
-      transactionsToday: stats ? parseInt(stats.transactions_today || "0") : 0,
+      transactionsToday: liveTransactionsToday,
       gasUsedToday: stats ? parseInt(stats.gas_used_today || "0") : 0,
       totalBlocks: stats ? parseInt(stats.total_blocks || "0") : bn,
       chainStats: stats,
