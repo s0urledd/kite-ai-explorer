@@ -126,24 +126,24 @@ export function useChainData(pollInterval = 10000) {
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // TPS: calculate from total txns / total time span (more stable than per-block avg)
+    // TPS: prefer Blockscout transactions_today for a stable 24h average
+    // Fallback: sample-based calculation from our 25 blocks
     const totalTimeSpan =
       bks.length >= 2
         ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
         : 0;
-    const avgTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
+    const sampleTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
+    const txToday = stats ? parseInt(stats.transactions_today || "0") : 0;
+    const avgTps = txToday > 0 ? txToday / 86400 : sampleTps;
 
-    // Peak TPS: use 3-block rolling window to smooth out noise
+    // Peak TPS: use per-block peak (highest tx count / block time for that block)
     let peakTps = 0;
-    for (let i = 0; i < bks.length - 3; i++) {
-      const windowTime = hex(bks[i].timestamp) - hex(bks[i + 3].timestamp);
-      if (windowTime <= 0) continue;
-      let windowTx = 0;
-      for (let j = i; j < i + 3; j++) {
-        windowTx += ((bks[j].transactions as RpcTransaction[])?.length || 0);
-      }
-      const windowTps = windowTx / windowTime;
-      if (windowTps > peakTps) peakTps = windowTps;
+    for (let i = 0; i < bks.length - 1; i++) {
+      const blockTime = hex(bks[i].timestamp) - hex(bks[i + 1].timestamp);
+      if (blockTime <= 0) continue;
+      const blockTx = ((bks[i].transactions as RpcTransaction[])?.length || 0);
+      const blockTps = blockTx / blockTime;
+      if (blockTps > peakTps) peakTps = blockTps;
     }
 
     // Total TXN: prefer Blockscout stats; fallback estimates from block number & avg tx/block

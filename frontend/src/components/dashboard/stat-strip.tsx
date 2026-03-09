@@ -12,6 +12,7 @@ interface StatStripProps {
 interface MetricCell {
   label: string;
   value: ReactNode;
+  align?: "left" | "right";
 }
 
 interface StatCard {
@@ -71,18 +72,19 @@ export function StatStrip({ data }: StatStripProps) {
       ),
       metrics: [
         {
-          label: "Total Transactions",
+          label: "Total Txn",
           value: <AnimatedNumber value={data.totalTx} />,
         },
         {
           label: "24H Transactions",
+          align: "right" as const,
           value:
             data.transactionsToday > 0
               ? data.transactionsToday.toLocaleString()
               : "\u2014",
         },
-        { label: "TPS", value: data.tps.toFixed(1) },
-        { label: "Peak TPS", value: data.peakTps.toFixed(1) },
+        { label: "TPS", value: data.tps.toFixed(2) },
+        { label: "Peak TPS", align: "right" as const, value: data.peakTps.toFixed(2) },
       ],
     },
     // ── Card 2: Block & Gas ──
@@ -107,11 +109,13 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "Avg Block Time",
+          align: "right" as const,
           value: data.avgBlockTime.toFixed(1) + "s",
         },
         { label: "Gas Price", value: <GasColorValue gwei={data.gasPrice} /> },
         {
           label: "Avg Gas/TXN",
+          align: "right" as const,
           value: avgGasPerTx > 0 ? avgGasPerTx.toLocaleString() : "\u2014",
         },
       ],
@@ -133,6 +137,7 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "24H Change",
+          align: "right" as const,
           value: priceNum > 0 ? <ChangeBadge value={change} /> : "\u2014",
         },
         {
@@ -144,6 +149,7 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "FDV",
+          align: "right" as const,
           value:
             price.fdv > 0 ? `$${(price.fdv / 1e9).toFixed(2)}B` : "\u2014",
         },
@@ -173,6 +179,7 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "New Wallets (24H)",
+          align: "right" as const,
           value: `~${data.newAddresses24h.toLocaleString()}`,
         },
         {
@@ -181,6 +188,7 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "24H New Contracts",
+          align: "right" as const,
           value: data.newContracts24h.toLocaleString(),
         },
       ],
@@ -231,20 +239,23 @@ export function StatStrip({ data }: StatStripProps) {
               />
 
               {/* 2×2 metrics grid */}
-              <div className="grid grid-cols-2 gap-x-5 gap-y-3.5">
-                {card.metrics.map((m) => (
-                  <div key={m.label}>
-                    <div
-                      className="text-[11px] uppercase tracking-wide mb-1 font-medium"
-                      style={{ color: "rgba(255,255,255,0.40)" }}
-                    >
-                      {m.label}
+              <div className="grid grid-cols-2 gap-y-3.5">
+                {card.metrics.map((m) => {
+                  const isRight = m.align === "right";
+                  return (
+                    <div key={m.label} className={isRight ? "text-right" : "text-left"}>
+                      <div
+                        className="text-[11px] uppercase tracking-wide mb-1 font-medium"
+                        style={{ color: "rgba(255,255,255,0.40)" }}
+                      >
+                        {m.label}
+                      </div>
+                      <div className="text-[15px] font-mono font-semibold text-white">
+                        {m.value}
+                      </div>
                     </div>
-                    <div className="text-[15px] font-mono font-semibold text-white">
-                      {m.value}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
