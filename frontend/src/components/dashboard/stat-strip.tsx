@@ -4,6 +4,7 @@ import { AnimatedNumber } from "@/components/common/animated-number";
 import type { ChainData } from "@/lib/hooks/use-chain-data";
 import { useKitePrice } from "@/lib/hooks/use-kite-price";
 import { type ReactNode } from "react";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 interface StatStripProps {
   data: ChainData;
@@ -11,10 +12,10 @@ interface StatStripProps {
 
 interface StatCard {
   title: string;
-  accent: string;        // tailwind color class stem (e.g. "kite-accent-gold")
-  accentHex: string;     // raw hex for inline styles
+  accentHex: string;
   icon: ReactNode;
   main: ReactNode;
+  sparkline?: ReactNode;
   rows: { label: string; value: ReactNode }[];
 }
 
@@ -23,23 +24,68 @@ function GasColorValue({ gwei }: { gwei: number }) {
   return <span className={`text-[12px] font-mono font-semibold ${color}`}>{gwei.toFixed(1)} Gwei</span>;
 }
 
+function ChangeBadge({ value, suffix = "%" }: { value: number; suffix?: string }) {
+  const isPositive = value >= 0;
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+        isPositive
+          ? "bg-green-500/15 text-green-400"
+          : "bg-red-500/15 text-red-400"
+      }`}
+    >
+      {isPositive ? "+" : ""}{value.toFixed(2)}{suffix}
+    </span>
+  );
+}
+
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+  const chartData = data.map((v, i) => ({ v, i }));
+  return (
+    <div className="h-[30px] w-full mt-1 -mb-1">
+      <ResponsiveContainer width="100%" height={30}>
+        <AreaChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.15} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke={color}
+            strokeWidth={1.5}
+            fill={`url(#spark-${color.replace("#", "")})`}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function StatStrip({ data }: StatStripProps) {
   const price = useKitePrice();
   const priceNum = parseFloat(price.priceUsd);
   const change = price.priceChange24h;
-  const isPositive = change >= 0;
 
-  // Avg gas per tx from today's data
   const avgGasPerTx =
     data.transactionsToday > 0
       ? Math.round(data.gasUsedToday / data.transactionsToday)
       : 0;
 
+  // Sparkline data from recent blocks tx counts
+  const sparkData =
+    data.blocks.length > 0
+      ? data.blocks.map((b) => ((b.transactions as unknown[]) || []).length).reverse()
+      : [12, 18, 15, 25, 22, 30, 28]; // fallback mock
+
   const cards: StatCard[] = [
     // ── Card 1: Chain Pulse ──
     {
       title: "Chain Pulse",
-      accent: "kite-accent-gold",
       accentHex: "#C4A96A",
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,14 +93,20 @@ export function StatStrip({ data }: StatStripProps) {
         </svg>
       ),
       main: (
-        <span className="text-xl font-bold font-mono text-kite-text">
-          <AnimatedNumber value={data.totalTx} />
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold font-mono text-kite-text">
+            <AnimatedNumber value={data.totalTx} />
+          </span>
+          {data.transactionsToday > 0 && (
+            <ChangeBadge value={data.tps > 0 ? ((data.tps / data.peakTps) * 100 - 50) : 0} />
+          )}
+        </div>
       ),
+      sparkline: <MiniSparkline data={sparkData} color="#C4A96A" />,
       rows: [
         {
           label: "24H TXN",
-          value: data.transactionsToday > 0 ? data.transactionsToday.toLocaleString() : "—",
+          value: data.transactionsToday > 0 ? data.transactionsToday.toLocaleString() : "\u2014",
         },
         { label: "TPS", value: data.tps.toFixed(1) },
         { label: "Peak TPS", value: data.peakTps.toFixed(1) },
@@ -63,7 +115,6 @@ export function StatStrip({ data }: StatStripProps) {
     // ── Card 2: Block & Gas ──
     {
       title: "Block & Gas",
-      accent: "kite-accent-teal",
       accentHex: "#5BA3A8",
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -82,14 +133,13 @@ export function StatStrip({ data }: StatStripProps) {
         { label: "Gas Price", value: <GasColorValue gwei={data.gasPrice} /> },
         {
           label: "Avg Gas/TXN",
-          value: avgGasPerTx > 0 ? avgGasPerTx.toLocaleString() : "—",
+          value: avgGasPerTx > 0 ? avgGasPerTx.toLocaleString() : "\u2014",
         },
       ],
     },
     // ── Card 3: KITE Economy ──
     {
       title: "KITE Economy",
-      accent: "kite-accent-emerald",
       accentHex: "#5BAA7C",
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -98,15 +148,11 @@ export function StatStrip({ data }: StatStripProps) {
         </svg>
       ),
       main: (
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-center gap-2">
           <span className="text-xl font-bold font-mono text-kite-text">
             {priceNum > 0 ? `$${priceNum.toFixed(4)}` : "$\u2014"}
           </span>
-          {priceNum > 0 && (
-            <span className={`text-[12px] font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
-              {isPositive ? "+" : ""}{change.toFixed(2)}%
-            </span>
-          )}
+          {priceNum > 0 && <ChangeBadge value={change} />}
         </div>
       ),
       rows: [
@@ -127,7 +173,6 @@ export function StatStrip({ data }: StatStripProps) {
     // ── Card 4: Network Activity ──
     {
       title: "Network Activity",
-      accent: "kite-accent-lavender",
       accentHex: "#A87BC4",
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -149,16 +194,20 @@ export function StatStrip({ data }: StatStripProps) {
       ),
       rows: [
         {
-          label: "Utilization",
-          value: data.utilization.toFixed(1) + "%",
+          label: "Active Wallets (24H)",
+          value: "\u2014",
         },
         {
-          label: "Active Contracts",
-          value: data.contracts.length.toLocaleString(),
+          label: "New Wallets (24H)",
+          value: "\u2014",
         },
         {
-          label: "Total Blocks",
-          value: data.totalBlocks > 0 ? data.totalBlocks.toLocaleString() : "—",
+          label: "Total Contracts",
+          value: data.contracts.length > 0 ? data.contracts.length.toLocaleString() : "\u2014",
+        },
+        {
+          label: "24H New Contracts",
+          value: "\u2014",
         },
       ],
     },
@@ -170,7 +219,16 @@ export function StatStrip({ data }: StatStripProps) {
         {cards.map((card, i) => (
           <div
             key={i}
-            className="relative bg-kite-surface rounded-[12px] border border-kite-border overflow-hidden hover:border-kite-border-light transition-all group"
+            className="relative bg-kite-surface rounded-[12px] overflow-hidden transition-all duration-300 hover:scale-[1.01] group"
+            style={{
+              boxShadow: `0 0 0 1px ${card.accentHex}15`,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 0 12px ${card.accentHex}25, 0 0 0 1px ${card.accentHex}30`;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = `0 0 0 1px ${card.accentHex}15`;
+            }}
           >
             {/* Top accent gradient line */}
             <div
@@ -188,6 +246,7 @@ export function StatStrip({ data }: StatStripProps) {
                   style={{
                     backgroundColor: `${card.accentHex}12`,
                     color: card.accentHex,
+                    filter: `drop-shadow(0 0 8px ${card.accentHex}66)`,
                   }}
                 >
                   {card.icon}
@@ -198,10 +257,19 @@ export function StatStrip({ data }: StatStripProps) {
               </div>
 
               {/* Main value */}
-              <div className="mb-3">{card.main}</div>
+              <div>{card.main}</div>
+
+              {/* Optional sparkline */}
+              {card.sparkline}
+
+              {/* Separator */}
+              <div
+                className="my-2.5"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+              />
 
               {/* Sub rows */}
-              <div className="pt-2.5 space-y-1.5">
+              <div className="space-y-1.5">
                 {card.rows.map((row) => (
                   <div key={row.label} className="flex items-center justify-between">
                     <span className="text-[11px] text-white">{row.label}</span>
