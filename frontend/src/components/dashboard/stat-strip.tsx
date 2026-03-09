@@ -173,24 +173,15 @@ export function StatStrip({ data }: StatStripProps) {
         },
         {
           label: "New Wallets (24H)",
-          value:
-            data.newAddresses24h > 0
-              ? data.newAddresses24h.toLocaleString()
-              : "\u2014",
+          value: `~${data.newAddresses24h.toLocaleString()}`,
         },
         {
           label: "Total Contracts",
-          value:
-            data.totalContracts > 0
-              ? data.totalContracts.toLocaleString()
-              : "\u2014",
+          value: data.totalContracts.toLocaleString(),
         },
         {
           label: "24H New Contracts",
-          value:
-            data.newContracts24h > 0
-              ? data.newContracts24h.toLocaleString()
-              : "\u2014",
+          value: data.newContracts24h.toLocaleString(),
         },
       ],
     },
