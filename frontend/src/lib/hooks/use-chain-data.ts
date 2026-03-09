@@ -192,7 +192,9 @@ export function useChainData(pollInterval = 10000) {
       txHistory: txH,
       gasHistory: gasH,
       totalTx,
-      avgBlockTime: stats ? stats.average_block_time / 1000 : avgBt,
+      avgBlockTime: (stats?.average_block_time && stats.average_block_time > 0)
+        ? stats.average_block_time / 1000
+        : (avgBt > 0 ? avgBt : 2),
       utilization: stats ? stats.network_utilization_percentage : util,
       tps: avgTps,
       peakTps,

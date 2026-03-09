@@ -34,3 +34,7 @@ export const BLOCKSCOUT_API_URL =
 export const BLOCKSCOUT_GRAPHQL_URL =
   process.env.NEXT_PUBLIC_BLOCKSCOUT_GRAPHQL_URL ||
   "http://localhost:4000/api/v1/graphql";
+
+// Stats microservice URL (separate Rust service for chart data)
+export const STATS_API_URL =
+  process.env.NEXT_PUBLIC_STATS_API_URL || "http://localhost:8153";

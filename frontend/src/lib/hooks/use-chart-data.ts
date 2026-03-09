@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { rpc, hex, type RpcBlock } from "@/lib/api/rpc";
 import { blockscout } from "@/lib/api/blockscout";
+import { STATS_API_URL } from "@/lib/config/chain";
 
 export type TimeRange = "24H" | "1W" | "1M";
 
@@ -62,14 +63,19 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
         Math.max(1, Math.floor(latestBlock / blocksPerWindow))
       );
 
-      // Try Blockscout chart data for TX (1W/1M get better data from daily aggregation)
-      let blockscoutTxData: ChartPoint[] | null = null;
+      // Try to get TX chart data from multiple sources (1W/1M)
+      let txChartData: ChartPoint[] | null = null;
       if (range !== "24H") {
-        blockscoutTxData = await loadBlockscoutTxData(range);
+        // Source 1: Stats microservice (most accurate, daily aggregation)
+        txChartData = await loadStatsMicroserviceTxData(range);
+        // Source 2: Blockscout backend /stats/charts/transactions
+        if (!txChartData) {
+          txChartData = await loadBlockscoutTxData(range);
+        }
       }
 
-      // Always load gas data from RPC sampling (Blockscout doesn't provide gas charts)
-      // Also load tx data from RPC if Blockscout failed
+      // Always load gas data from RPC sampling (no other source provides gas charts)
+      // Also load tx data from RPC as ultimate fallback
       const rpcData = await loadRpcSampledData(
         latestBlock,
         actualWindows,
@@ -77,7 +83,7 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
         config.label,
       );
 
-      setTxData(blockscoutTxData && blockscoutTxData.length > 2 ? blockscoutTxData : rpcData.tx);
+      setTxData(txChartData && txChartData.length > 2 ? txChartData : rpcData.tx);
       setGasData(rpcData.gas);
     } catch {
       // Keep previous data on error
@@ -94,8 +100,46 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
 }
 
 /**
+ * Try stats microservice /api/v1/lines/newTxns for tx chart data.
+ * The stats service has its own database with pre-aggregated daily data.
+ */
+async function loadStatsMicroserviceTxData(range: TimeRange): Promise<ChartPoint[] | null> {
+  try {
+    const res = await fetch(`${STATS_API_URL}/api/v1/lines/newTxns`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // Stats microservice returns: { chart: [{ date: "2024-01-01", value: "123" }, ...] }
+    const chart = data?.chart;
+    if (!Array.isArray(chart) || chart.length === 0) return null;
+
+    const days = range === "1W" ? 7 : 30;
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const filtered = chart
+      .filter((d: { date: string }) => new Date(d.date) >= cutoff)
+      .sort((a: { date: string }, b: { date: string }) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+    if (filtered.length < 2) return null;
+
+    return filtered.map((d: { date: string; value: string }) => ({
+      t: new Date(d.date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      v: parseInt(d.value) || 0,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Try Blockscout /stats/charts/transactions for tx data.
- * Returns daily aggregated tx counts - accurate for 1W/1M.
+ * Returns daily aggregated tx counts from the historian's transaction_stats table.
  */
 async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | null> {
   try {
@@ -126,6 +170,7 @@ async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | nu
 
 /**
  * RPC sampling: fetch a few blocks per time window, extrapolate tx count & avg gas.
+ * Ultimate fallback — always works as long as the RPC is reachable.
  */
 async function loadRpcSampledData(
   latestBlock: number,
