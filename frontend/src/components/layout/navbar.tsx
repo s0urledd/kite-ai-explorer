@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { KiteLogo } from "@/components/common/kite-logo";
-import { useKitePrice } from "@/lib/hooks/use-kite-price";
 import { useTheme } from "@/lib/hooks/use-theme";
 
 const NAV_ITEMS = [
@@ -17,12 +16,7 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const price = useKitePrice();
   const { theme, toggle } = useTheme();
-
-  const priceNum = parseFloat(price.priceUsd);
-  const change = price.priceChange24h;
-  const isPositive = change >= 0;
 
   return (
     <nav className="sticky top-0 z-50 bg-kite-bg/95 backdrop-blur-md border-b border-kite-border">
@@ -30,18 +24,6 @@ export function Navbar() {
         {/* Left */}
         <div className="flex items-center gap-3">
           <KiteLogo size={26} />
-
-          {/* Price badge */}
-          {priceNum > 0 && (
-            <div className="flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg bg-kite-surface border border-kite-border">
-              <span className="text-[12px] font-mono font-semibold text-kite-text">
-                ${priceNum.toFixed(4)}
-              </span>
-              <span className={`text-[11px] font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
-                ({isPositive ? "+" : ""}{change.toFixed(2)}%)
-              </span>
-            </div>
-          )}
 
           <div className="flex gap-0.5 ml-3">
             {NAV_ITEMS.map((item) => {

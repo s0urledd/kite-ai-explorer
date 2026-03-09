@@ -18,6 +18,10 @@ const config: Config = {
           text: "var(--kite-text)",
           "text-secondary": "var(--kite-text-secondary)",
           "text-muted": "var(--kite-text-muted)",
+          "accent-gold": "var(--kite-accent-gold)",
+          "accent-teal": "var(--kite-accent-teal)",
+          "accent-emerald": "var(--kite-accent-emerald)",
+          "accent-lavender": "var(--kite-accent-lavender)",
         },
       },
       fontFamily: {

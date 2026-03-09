@@ -20,6 +20,12 @@
     --kite-text: #F5F0E8;
     --kite-text-secondary: #D8D3CB;
     --kite-text-muted: #5C574E;
+
+    /* Card accent colors */
+    --kite-accent-gold: #C4A96A;
+    --kite-accent-teal: #5BA3A8;
+    --kite-accent-emerald: #5BAA7C;
+    --kite-accent-lavender: #A87BC4;
   }
 
   /* Light theme */

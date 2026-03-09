@@ -18,6 +18,9 @@ export interface ChainData {
   peakTps: number;
   contracts: { address: string; calls: number; callers: number }[];
   addressCount: number;
+  transactionsToday: number;
+  gasUsedToday: number;
+  totalBlocks: number;
   // Blockscout real stats
   chainStats: ChainStats | null;
 }
@@ -35,6 +38,9 @@ const INITIAL: ChainData = {
   peakTps: 0,
   contracts: [],
   addressCount: 0,
+  transactionsToday: 0,
+  gasUsedToday: 0,
+  totalBlocks: 0,
   chainStats: null,
 };
 
@@ -135,6 +141,9 @@ export function useChainData(pollInterval = 10000) {
       peakTps,
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
+      transactionsToday: stats ? parseInt(stats.transactions_today || "0") : 0,
+      gasUsedToday: stats ? parseInt(stats.gas_used_today || "0") : 0,
+      totalBlocks: stats ? parseInt(stats.total_blocks || "0") : bn,
       chainStats: stats,
     });
   }, []);
