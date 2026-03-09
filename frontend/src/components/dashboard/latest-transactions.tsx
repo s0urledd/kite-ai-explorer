@@ -66,10 +66,12 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
                   )}
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-white">
+                  <span className="text-kite-text-muted">From</span>
                   <span className="font-mono text-kite-text-secondary">{shortenHash(tx.from, 4)}</span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="flex-shrink-0 text-kite-text-muted">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
+                  <span className="text-kite-text-muted">To</span>
                   <span className="font-mono text-kite-text-secondary">{shortenHash(tx.to || "", 4)}</span>
                 </div>
               </div>
