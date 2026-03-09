@@ -23,6 +23,10 @@ export interface ChainData {
   totalBlocks: number;
   // Blockscout real stats
   chainStats: ChainStats | null;
+  // Network activity counters
+  totalContracts: number;
+  newAddresses24h: number;
+  newContracts24h: number;
 }
 
 const INITIAL: ChainData = {
@@ -42,6 +46,9 @@ const INITIAL: ChainData = {
   gasUsedToday: 0,
   totalBlocks: 0,
   chainStats: null,
+  totalContracts: 0,
+  newAddresses24h: 0,
+  newContracts24h: 0,
 };
 
 export function useChainData(pollInterval = 10000) {
@@ -50,10 +57,11 @@ export function useChainData(pollInterval = 10000) {
 
   const load = useCallback(async () => {
     // Fetch RPC data and Blockscout stats in parallel
-    const [bnH, gpH, stats] = await Promise.all([
+    const [bnH, gpH, stats, counters] = await Promise.all([
       rpc<string>("eth_blockNumber"),
       rpc<string>("eth_gasPrice"),
       blockscout.getStats().catch(() => null),
+      blockscout.getCounters().catch(() => null),
     ]);
     const bn = hex(bnH);
     const gp = gwei(gpH);
@@ -128,6 +136,17 @@ export function useChainData(pollInterval = 10000) {
       totalTx = Math.round(avgTxPerBlock * bn);
     }
 
+    // Parse counters from Blockscout /stats/counters (if available)
+    const totalContracts = counters
+      ? parseInt(counters.total_smart_contracts || counters.smart_contracts || "0")
+      : 0;
+    const newAddresses24h = counters
+      ? parseInt(counters.new_addresses_24h || "0")
+      : 0;
+    const newContracts24h = counters
+      ? parseInt(counters.new_smart_contracts_24h || counters.new_verified_smart_contracts_24h || "0")
+      : 0;
+
     setData({
       blockNumber: bn,
       gasPrice: gp,
@@ -145,6 +164,9 @@ export function useChainData(pollInterval = 10000) {
       gasUsedToday: stats ? parseInt(stats.gas_used_today || "0") : 0,
       totalBlocks: stats ? parseInt(stats.total_blocks || "0") : bn,
       chainStats: stats,
+      totalContracts,
+      newAddresses24h,
+      newContracts24h,
     });
   }, []);
 
