@@ -161,12 +161,8 @@ export function StatStrip({ data }: StatStripProps) {
           value: price.marketCap > 0 ? `$${(price.marketCap / 1e6).toFixed(2)}M` : "\u2014",
         },
         {
-          label: "24H Volume",
-          value: price.volume24h > 0 ? `$${(price.volume24h / 1e3).toFixed(1)}K` : "\u2014",
-        },
-        {
-          label: "Liquidity",
-          value: price.liquidity > 0 ? `$${(price.liquidity / 1e3).toFixed(1)}K` : "\u2014",
+          label: "FDV",
+          value: price.fdv > 0 ? `$${(price.fdv / 1e9).toFixed(2)}B` : "\u2014",
         },
       ],
     },
