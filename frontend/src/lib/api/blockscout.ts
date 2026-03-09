@@ -178,6 +178,31 @@ class BlockscoutClient {
     return this.fetch("/search/check-redirect", { q: query });
   }
 
+  // --- Counters ---
+  async getCounters(): Promise<Record<string, string>> {
+    return this.fetch("/stats/counters");
+  }
+
+  async getSmartContractsCount(): Promise<number> {
+    try {
+      const data = await this.fetch<PaginatedResponse<SmartContract>>("/smart-contracts", { limit: "1" });
+      // If next_page_params exists, there are more — but we at least know items.length
+      // Some Blockscout instances include total in headers; we work with what we get
+      return data.items?.length ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async getTokensCount(): Promise<number> {
+    try {
+      const data = await this.fetch<PaginatedResponse<Token>>("/tokens", { limit: "1" });
+      return data.items?.length ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
   // --- Health ---
   async health(): Promise<{ healthy: boolean }> {
     return this.fetch("/health");

@@ -3,7 +3,6 @@
 import { AnimatedNumber } from "@/components/common/animated-number";
 import type { ChainData } from "@/lib/hooks/use-chain-data";
 import { useKitePrice } from "@/lib/hooks/use-kite-price";
-import { hex } from "@/lib/api/rpc";
 import { type ReactNode } from "react";
 
 interface StatStripProps {
@@ -22,6 +21,8 @@ interface StatCard {
   metrics: MetricCell[];
 }
 
+const GOLD = "#C4A96A";
+
 function GasColorValue({ gwei }: { gwei: number }) {
   const color =
     gwei < 5 ? "text-green-400" : gwei < 20 ? "text-yellow-400" : "text-red-400";
@@ -36,7 +37,7 @@ function ChangeBadge({ value }: { value: number }) {
   const isPositive = value >= 0;
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold leading-none ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold leading-none ${
         isPositive
           ? "bg-green-500/15 text-green-400"
           : "bg-red-500/15 text-red-400"
@@ -58,17 +59,11 @@ export function StatStrip({ data }: StatStripProps) {
       ? Math.round(data.gasUsedToday / data.transactionsToday)
       : 0;
 
-  const latestBlock = data.blocks[0];
-  const latestBlockTxCount = latestBlock
-    ? ((latestBlock.transactions as unknown[]) || []).length
-    : 0;
-  const latestBlockSize = latestBlock ? hex(latestBlock.size) : 0;
-
   const cards: StatCard[] = [
     // ── Card 1: Chain Pulse ──
     {
       title: "Chain Pulse",
-      accentHex: "#C4A96A",
+      accentHex: GOLD,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -88,17 +83,12 @@ export function StatStrip({ data }: StatStripProps) {
         },
         { label: "TPS", value: data.tps.toFixed(1) },
         { label: "Peak TPS", value: data.peakTps.toFixed(1) },
-        {
-          label: "Total Accounts",
-          value: <AnimatedNumber value={data.addressCount} />,
-        },
-        { label: "24H New Accounts", value: "\u2014" },
       ],
     },
     // ── Card 2: Block & Gas ──
     {
       title: "Block & Gas",
-      accentHex: "#5BA3A8",
+      accentHex: GOLD,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -124,23 +114,12 @@ export function StatStrip({ data }: StatStripProps) {
           label: "Avg Gas/TXN",
           value: avgGasPerTx > 0 ? avgGasPerTx.toLocaleString() : "\u2014",
         },
-        {
-          label: "TXN in Block",
-          value: latestBlockTxCount.toLocaleString(),
-        },
-        {
-          label: "Block Size",
-          value:
-            latestBlockSize > 0
-              ? `${(latestBlockSize / 1024).toFixed(1)} KB`
-              : "\u2014",
-        },
       ],
     },
     // ── Card 3: KITE Economy ──
     {
       title: "KITE Economy",
-      accentHex: "#5BAA7C",
+      accentHex: GOLD,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="1" x2="12" y2="23" />
@@ -168,14 +147,12 @@ export function StatStrip({ data }: StatStripProps) {
           value:
             price.fdv > 0 ? `$${(price.fdv / 1e9).toFixed(2)}B` : "\u2014",
         },
-        { label: "Total Supply", value: "\u2014" },
-        { label: "Burnt KITE", value: "\u2014" },
       ],
     },
     // ── Card 4: Network Activity ──
     {
       title: "Network Activity",
-      accentHex: "#A87BC4",
+      accentHex: GOLD,
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="2" />
@@ -194,17 +171,27 @@ export function StatStrip({ data }: StatStripProps) {
           label: "Total Wallets",
           value: <AnimatedNumber value={data.addressCount} />,
         },
-        { label: "New Wallets (24H)", value: "\u2014" },
+        {
+          label: "New Wallets (24H)",
+          value:
+            data.newAddresses24h > 0
+              ? data.newAddresses24h.toLocaleString()
+              : "\u2014",
+        },
         {
           label: "Total Contracts",
           value:
-            data.contracts.length > 0
-              ? data.contracts.length.toLocaleString()
+            data.totalContracts > 0
+              ? data.totalContracts.toLocaleString()
               : "\u2014",
         },
-        { label: "24H New Contracts", value: "\u2014" },
-        { label: "Total Tokens", value: "\u2014" },
-        { label: "24H New Tokens", value: "\u2014" },
+        {
+          label: "24H New Contracts",
+          value:
+            data.newContracts24h > 0
+              ? data.newContracts24h.toLocaleString()
+              : "\u2014",
+        },
       ],
     },
   ];
@@ -215,30 +202,22 @@ export function StatStrip({ data }: StatStripProps) {
         {cards.map((card, i) => (
           <div
             key={i}
-            className="relative bg-kite-surface rounded-[12px] overflow-hidden transition-all duration-300 hover:scale-[1.01] group"
+            className="relative bg-kite-surface rounded-[12px] overflow-hidden transition-colors duration-300 group"
             style={{
-              boxShadow: `0 0 0 1px ${card.accentHex}15`,
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                `0 0 12px ${card.accentHex}25, 0 0 0 1px ${card.accentHex}30`;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                `0 0 0 1px ${card.accentHex}15`;
+              boxShadow: `0 0 0 1px ${GOLD}10`,
             }}
           >
-            {/* Top accent gradient line */}
+            {/* Top gold gradient line */}
             <div
               className="absolute top-0 left-0 right-0 h-[2px]"
               style={{
-                background: `linear-gradient(90deg, ${card.accentHex}00 0%, ${card.accentHex} 50%, ${card.accentHex}00 100%)`,
+                background: `linear-gradient(90deg, ${GOLD}00 0%, ${GOLD} 50%, ${GOLD}00 100%)`,
               }}
             />
 
             <div className="p-4 pt-5">
               {/* Header */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
                 <div
                   className="w-7 h-7 rounded-[8px] flex items-center justify-center flex-shrink-0"
                   style={{
@@ -249,23 +228,29 @@ export function StatStrip({ data }: StatStripProps) {
                 >
                   {card.icon}
                 </div>
-                <span className="text-[11px] text-kite-text-muted font-semibold uppercase tracking-wider">
+                <span className="text-xs text-kite-text-muted font-semibold uppercase tracking-wider">
                   {card.title}
                 </span>
               </div>
 
-              {/* 3×2 metrics grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+              {/* Separator under title */}
+              <div
+                className="mb-3"
+                style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+              />
+
+              {/* 2×2 metrics grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 {card.metrics.map((m) => (
                   <div key={m.label}>
                     <div
-                      className="text-[10px] uppercase tracking-wide mb-0.5"
-                      style={{ color: "rgba(255,255,255,0.4)" }}
+                      className="text-[11px] uppercase tracking-wide mb-1 font-medium"
+                      style={{ color: "rgba(255,255,255,0.40)" }}
                     >
                       {m.label}
                     </div>
-                    <div className="text-[13px] font-mono font-semibold text-white">
-                      {typeof m.value === "string" ? m.value : m.value}
+                    <div className="text-sm font-mono font-semibold text-white">
+                      {m.value}
                     </div>
                   </div>
                 ))}
