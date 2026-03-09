@@ -54,14 +54,15 @@ const INITIAL: ChainData = {
 export function useChainData(pollInterval = 10000) {
   const [data, setData] = useState<ChainData>(INITIAL);
   const addrs = useRef(new Set<string>());
+  // Cache total contracts count — refresh every 60s, not every 10s
+  const contractCountCache = useRef({ value: 0, lastFetch: 0 });
 
   const load = useCallback(async () => {
     // Fetch RPC data and Blockscout stats in parallel
-    const [bnH, gpH, stats, counters] = await Promise.all([
+    const [bnH, gpH, stats] = await Promise.all([
       rpc<string>("eth_blockNumber"),
       rpc<string>("eth_gasPrice"),
       blockscout.getStats().catch(() => null),
-      blockscout.getCounters().catch(() => null),
     ]);
     const bn = hex(bnH);
     const gp = gwei(gpH);
@@ -73,9 +74,11 @@ export function useChainData(pollInterval = 10000) {
     const bks = (await Promise.all(promises)).filter(Boolean) as RpcBlock[];
 
     let tot = 0;
+    let contractCreations = 0;
     const contractMap: Record<string, { address: string; count: number; users: Set<string> }> = {};
     const txH: { t: string; v: number }[] = [];
     const gasH: { t: string; v: number }[] = [];
+    const sampleAddrs = new Set<string>();
 
     bks.forEach((b) => {
       const txs = (b.transactions || []) as RpcTransaction[];
@@ -92,7 +95,17 @@ export function useChainData(pollInterval = 10000) {
 
       txs.forEach((tx) => {
         addrs.current.add(tx.from);
-        if (tx.to) addrs.current.add(tx.to);
+        sampleAddrs.add(tx.from);
+        if (tx.to) {
+          addrs.current.add(tx.to);
+          sampleAddrs.add(tx.to);
+        }
+
+        // Contract creation: tx.to is null
+        if (!tx.to) {
+          contractCreations++;
+        }
+
         if (tx.to && tx.input?.length > 10) {
           if (!contractMap[tx.to]) contractMap[tx.to] = { address: tx.to, count: 0, users: new Set() };
           contractMap[tx.to].count++;
@@ -131,21 +144,39 @@ export function useChainData(pollInterval = 10000) {
     if (stats?.total_transactions) {
       totalTx = parseInt(stats.total_transactions);
     } else {
-      // Better fallback: estimate from average txs/block across our sample × total blocks
       const avgTxPerBlock = bks.length > 0 ? tot / bks.length : 0;
       totalTx = Math.round(avgTxPerBlock * bn);
     }
 
-    // Parse counters from Blockscout /stats/counters (if available)
-    const totalContracts = counters
-      ? parseInt(counters.total_smart_contracts || counters.smart_contracts || "0")
+    // ── Extrapolate 24H metrics from our 25-block sample ──
+    // Sample duration in seconds
+    const sampleDuration =
+      bks.length >= 2
+        ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
+        : 0;
+    const DAY_SECONDS = 86400;
+    const scaleFactor = sampleDuration > 0 ? DAY_SECONDS / sampleDuration : 0;
+
+    // New wallets (24H): unique addresses in sample × scale factor
+    // This is an estimate — unique addresses seen in our block window, projected to 24H
+    const newAddresses24h = scaleFactor > 0
+      ? Math.round(sampleAddrs.size * scaleFactor)
       : 0;
-    const newAddresses24h = counters
-      ? parseInt(counters.new_addresses_24h || "0")
-      : 0;
-    const newContracts24h = counters
-      ? parseInt(counters.new_smart_contracts_24h || counters.new_verified_smart_contracts_24h || "0")
-      : 0;
+
+    // New contracts (24H): contract creation txns in sample × scale factor
+    const newContracts24h = scaleFactor > 0
+      ? Math.round(contractCreations * scaleFactor)
+      : contractCreations;
+
+    // ── Total contracts: fetch from Blockscout (cached, refresh every 60s) ──
+    const now = Date.now();
+    if (now - contractCountCache.current.lastFetch > 60000) {
+      const count = await blockscout.countAllSmartContracts();
+      if (count > 0) {
+        contractCountCache.current = { value: count, lastFetch: now };
+      }
+    }
+    const totalContracts = contractCountCache.current.value;
 
     setData({
       blockNumber: bn,

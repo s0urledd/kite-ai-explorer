@@ -179,25 +179,18 @@ class BlockscoutClient {
   }
 
   // --- Counters ---
-  async getCounters(): Promise<Record<string, string>> {
-    return this.fetch("/stats/counters");
-  }
-
-  async getSmartContractsCount(): Promise<number> {
+  /** Count ALL smart contracts by paginating through /smart-contracts */
+  async countAllSmartContracts(): Promise<number> {
     try {
-      const data = await this.fetch<PaginatedResponse<SmartContract>>("/smart-contracts", { limit: "1" });
-      // If next_page_params exists, there are more — but we at least know items.length
-      // Some Blockscout instances include total in headers; we work with what we get
-      return data.items?.length ?? 0;
-    } catch {
-      return 0;
-    }
-  }
-
-  async getTokensCount(): Promise<number> {
-    try {
-      const data = await this.fetch<PaginatedResponse<Token>>("/tokens", { limit: "1" });
-      return data.items?.length ?? 0;
+      let total = 0;
+      let params: Record<string, string> = { limit: "150" };
+      for (let page = 0; page < 20; page++) {
+        const data = await this.fetch<PaginatedResponse<SmartContract>>("/smart-contracts", params);
+        total += data.items?.length ?? 0;
+        if (!data.next_page_params) break;
+        params = { ...data.next_page_params, limit: "150" };
+      }
+      return total;
     } catch {
       return 0;
     }
