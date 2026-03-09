@@ -27,16 +27,16 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
         </Link>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-transparent">
+      <div className="max-h-[420px] overflow-y-auto">
         {txs.map((tx, idx) => {
           const isContract = tx.input?.length > 10;
           const val = hex(tx.value);
 
           return (
-            <Link
+            <div
               key={tx.hash + idx}
-              href={`/tx/${tx.hash}`}
               className="flex items-center gap-3.5 px-5 py-3 hover:bg-kite-surface-hover transition-colors group"
+              style={idx < txs.length - 1 ? { borderBottom: "1px solid rgba(255,255,255,0.04)" } : undefined}
             >
               {/* Tx icon */}
               <div className="flex-shrink-0 w-9 h-9 rounded-[10px] bg-kite-gold-faint border border-kite-border flex items-center justify-center">
@@ -56,23 +56,36 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
               {/* Hash & addresses */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[13px] font-mono text-kite-gold group-hover:text-kite-gold-light transition-colors truncate">
+                  <Link
+                    href={`/tx/${tx.hash}`}
+                    className="text-[13px] font-mono text-kite-gold hover:text-kite-gold-light transition-colors truncate"
+                  >
                     {shortenHash(tx.hash, 8)}
-                  </span>
+                  </Link>
                   {isContract && (
                     <span className="text-[10px] text-kite-gold-dim bg-kite-gold-faint px-1.5 py-px rounded font-medium border border-transparent flex-shrink-0">
                       Contract
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-[11px] text-white">
+                <div className="flex items-center gap-1 text-[11px]">
                   <span className="text-kite-text-muted">From</span>
-                  <span className="font-mono text-kite-text-secondary">{shortenHash(tx.from, 4)}</span>
+                  <Link
+                    href={`/address/${tx.from}`}
+                    className="font-mono text-kite-text-secondary hover:text-kite-gold transition-colors"
+                  >
+                    {shortenHash(tx.from, 4)}
+                  </Link>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="flex-shrink-0 text-kite-text-muted">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
                   <span className="text-kite-text-muted">To</span>
-                  <span className="font-mono text-kite-text-secondary">{shortenHash(tx.to || "", 4)}</span>
+                  <Link
+                    href={`/address/${tx.to || ""}`}
+                    className="font-mono text-kite-text-secondary hover:text-kite-gold transition-colors"
+                  >
+                    {shortenHash(tx.to || "", 4)}
+                  </Link>
                 </div>
               </div>
 
@@ -85,7 +98,7 @@ export function LatestTransactions({ blocks }: LatestTransactionsProps) {
                   {timeAgo(tx._ts.toString())} ago
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
 

@@ -18,8 +18,8 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
         </Link>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-transparent">
-        {blocks.map((b) => {
+      <div className="max-h-[420px] overflow-y-auto">
+        {blocks.map((b, idx) => {
           const n = hex(b.number);
           const tc = Array.isArray(b.transactions) ? b.transactions.length : 0;
           const ts = hex(b.timestamp);
@@ -32,6 +32,7 @@ export function LatestBlocks({ blocks }: LatestBlocksProps) {
               key={n}
               href={`/block/${n}`}
               className="flex items-center gap-3.5 px-5 py-3 hover:bg-kite-surface-hover transition-colors group"
+              style={idx < blocks.length - 1 ? { borderBottom: "1px solid rgba(255,255,255,0.04)" } : undefined}
             >
               {/* Block icon */}
               <div className="flex-shrink-0 w-9 h-9 rounded-[10px] bg-kite-gold-faint border border-kite-border flex items-center justify-center">
