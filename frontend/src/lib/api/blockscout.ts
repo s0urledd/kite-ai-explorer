@@ -186,16 +186,19 @@ class BlockscoutClient {
    */
   async countAllContracts(): Promise<number> {
     try {
-      // Try counting contract addresses from /addresses endpoint
+      // Paginate ALL addresses and count is_contract=true
+      // 50 addresses per page, need enough pages to cover total_addresses
       let total = 0;
       let params: Record<string, string> = {};
-      for (let page = 0; page < 10; page++) {
+      for (let page = 0; page < 30; page++) {
         const data = await this.fetch<PaginatedResponse<Address>>("/addresses", params);
         const items = data.items || [];
         if (items.length === 0) break;
         total += items.filter((a) => a.is_contract).length;
         if (!data.next_page_params) break;
-        params = { ...data.next_page_params };
+        params = Object.fromEntries(
+          Object.entries(data.next_page_params).map(([k, v]) => [k, String(v)])
+        );
       }
       return total;
     } catch {
