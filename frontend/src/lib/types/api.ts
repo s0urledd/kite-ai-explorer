@@ -244,7 +244,8 @@ export interface PaginatedResponse<T> {
 export interface TransactionChartData {
   chart_data: Array<{
     date: string;
-    tx_count: number;
+    tx_count?: number;
+    transaction_count?: number;
   }>;
 }
 
