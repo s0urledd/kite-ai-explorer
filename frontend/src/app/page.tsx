@@ -32,16 +32,16 @@ export default function DashboardPage() {
       <StatStrip data={data} peakTps24h={peakTps24h} />
 
       <div className="max-w-[1280px] mx-auto px-6 py-4 flex flex-col gap-3.5">
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-          <TxChart data={txChart.txData} loading={txChart.loading} onRangeChange={setTxRange} />
-          <GasChart data={gasChart.gasData} loading={gasChart.loading} onRangeChange={setGasRange} />
-        </div>
-
         {/* Latest Blocks & Transactions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
           <LatestBlocks blocks={data.blocks} />
           <LatestTransactions blocks={data.blocks} />
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <TxChart data={txChart.txData} loading={txChart.loading} onRangeChange={setTxRange} />
+          <GasChart data={gasChart.gasData} loading={gasChart.loading} onRangeChange={setGasRange} />
         </div>
 
         {/* Active Contracts */}
