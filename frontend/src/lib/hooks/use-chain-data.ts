@@ -129,6 +129,8 @@ async function fetch24hTransactions(stats: ChainStats | null): Promise<number> {
 export function useChainData(pollInterval = 10000) {
   const [data, setData] = useState<ChainData>(INITIAL);
   const addrs = useRef(new Set<string>());
+  // Track peak TPS over 24H — only goes up, resets after 24H
+  const peakTpsRef = useRef({ value: 0, since: Date.now() });
   // Cache slow-changing values — refresh every 60s
   const slowCache = useRef({
     totalContracts: 0,
@@ -200,12 +202,20 @@ export function useChainData(pollInterval = 10000) {
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // TPS: instantaneous rate from recent blocks (fallback only)
+    // TPS: instantaneous rate from recent blocks
     const totalTimeSpan =
       bks.length >= 2
         ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
         : 0;
     const instantTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
+
+    // Peak TPS: track highest instantaneous TPS seen, reset every 24H
+    const now24h = Date.now();
+    if (now24h - peakTpsRef.current.since > 86400_000) {
+      peakTpsRef.current = { value: instantTps, since: now24h };
+    } else if (instantTps > peakTpsRef.current.value) {
+      peakTpsRef.current.value = instantTps;
+    }
 
     // Total TXN: prefer Blockscout stats
     let totalTx: number;
@@ -251,10 +261,10 @@ export function useChainData(pollInterval = 10000) {
         ? stats.average_block_time / 1000
         : (localAvgBt > 0 ? localAvgBt : 2),
       utilization: stats ? stats.network_utilization_percentage : util,
-      // TPS: prefer 24H average (stable), fallback to instantaneous
+      // Avg TPS: 24H transaction count / seconds in a day
       tps: transactionsToday > 0 ? transactionsToday / 86400 : instantTps,
-      // Peak TPS: computed from 24H chart data in dashboard component
-      peakTps: instantTps,
+      // Peak TPS: highest instantaneous TPS observed in the last 24H
+      peakTps: peakTpsRef.current.value,
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
       transactionsToday,
