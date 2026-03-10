@@ -22,9 +22,19 @@ export default function DashboardPage() {
   const tx24hChart = useChartData(data.blockNumber, "24H", data.avgBlockTime);
 
   // Peak TPS (24H): highest hourly TX count / 3600
-  const peakTps24h = tx24hChart.txData.length > 0
-    ? Math.max(...tx24hChart.txData.map((p) => p.v)) / 3600
-    : data.peakTps;
+  // If chart data is incomplete vs transactionsToday, scale proportionally
+  let peakTps24h = data.peakTps;
+  if (tx24hChart.txData.length > 0) {
+    const chartTotal = tx24hChart.txData.reduce((sum, p) => sum + p.v, 0);
+    const maxHourlyTx = Math.max(...tx24hChart.txData.map((p) => p.v));
+    // Scale peak if chart captured fewer TX than Blockscout reports
+    const scale = (data.transactionsToday > 0 && chartTotal > 0)
+      ? data.transactionsToday / chartTotal
+      : 1;
+    peakTps24h = (maxHourlyTx * Math.min(scale, 3)) / 3600; // cap scale at 3x to avoid outliers
+  }
+  // Peak can never be less than average
+  if (peakTps24h < data.tps) peakTps24h = data.tps;
 
   return (
     <div>
