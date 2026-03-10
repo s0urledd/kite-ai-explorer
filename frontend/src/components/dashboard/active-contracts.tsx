@@ -24,7 +24,7 @@ export function ActiveContracts({ contracts }: ActiveContractsProps) {
           </svg>
           <span className="text-sm font-semibold text-kite-text">Active Contracts</span>
         </div>
-        <Link href="/contracts" className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors">
+        <Link href="/contracts" className="text-xs text-kite-gold-dim font-medium hover:text-kite-gold transition-colors px-3 py-1 rounded-lg border border-kite-gold-dim/20 hover:border-kite-gold/40 hover:bg-kite-gold/5">
           View all &rarr;
         </Link>
       </div>
