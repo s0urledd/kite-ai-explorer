@@ -29,12 +29,12 @@ export const kiteMainnet = defineChain({
 });
 
 export const BLOCKSCOUT_API_URL =
-  process.env.NEXT_PUBLIC_BLOCKSCOUT_API_URL || "https://www.kitescan.ai/api/v2";
+  process.env.NEXT_PUBLIC_BLOCKSCOUT_API_URL || "http://localhost:4000/api/v2";
 
 export const BLOCKSCOUT_GRAPHQL_URL =
   process.env.NEXT_PUBLIC_BLOCKSCOUT_GRAPHQL_URL ||
-  "https://www.kitescan.ai/api/v1/graphql";
+  "http://localhost:4000/api/v1/graphql";
 
 // Stats microservice URL (separate Rust service for chart/counter data)
 export const STATS_API_URL =
-  process.env.NEXT_PUBLIC_STATS_API_URL || "https://www.kitescan.ai/stats-service";
+  process.env.NEXT_PUBLIC_STATS_API_URL || "http://localhost:8153";
