@@ -73,72 +73,18 @@ async function fetchLatestStatValue(endpoint: string): Promise<number> {
   }
 }
 
-/**
- * Get a rolling 24H transaction count from multiple sources:
- * 1. Stats microservice daily chart (most accurate)
- * 2. Blockscout stats.transactions_today (fallback)
- */
-async function fetch24hTransactions(stats: ChainStats | null): Promise<number> {
-  // Source 1: Stats microservice — get last 2 days, weight by time of day for rolling 24H
-  try {
-    const res = await fetch(`${STATS_API_URL}/api/v1/lines/newTxns`, {
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const chart = data?.chart;
-      if (Array.isArray(chart) && chart.length >= 2) {
-        // Get last 2 entries (today partial + yesterday full)
-        const sorted = chart.sort(
-          (a: { date: string }, b: { date: string }) =>
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-        const today = sorted[sorted.length - 1];
-        const yesterday = sorted[sorted.length - 2];
-        const todayVal = parseInt(today.value) || 0;
-        const yesterdayVal = parseInt(yesterday.value) || 0;
-
-        // Calculate how far through today we are (UTC)
-        const now = new Date();
-        const hoursPassed = now.getUTCHours() + now.getUTCMinutes() / 60;
-        const hoursRemaining = 24 - hoursPassed;
-
-        // Rolling 24H ≈ today's partial count + proportional amount from yesterday
-        if (hoursPassed > 0) {
-          const rolling24h = todayVal + Math.round(yesterdayVal * (hoursRemaining / 24));
-          if (rolling24h > 0) return rolling24h;
-        }
-
-        // Fallback: just use yesterday's full count
-        if (yesterdayVal > 0) return yesterdayVal;
-      }
-    }
-  } catch {
-    // Fall through to next source
-  }
-
-  // Source 2: Blockscout stats.transactions_today
-  if (stats?.transactions_today) {
-    const val = parseInt(stats.transactions_today);
-    if (val > 0) return val;
-  }
-
-  return 0;
-}
-
 export function useChainData(pollInterval = 10000) {
   const [data, setData] = useState<ChainData>(INITIAL);
   const addrs = useRef(new Set<string>());
   // Track peak TPS over 24H — only goes up, resets after 24H
   const peakTpsRef = useRef({ value: 0, since: Date.now() });
-  // Track new TX since last Blockscout baseline to keep 24H TX real-time
-  const txTracker = useRef({ lastSeenBlock: 0, txSinceBaseline: 0, baseline: 0 });
+  // Track new TX since last Blockscout update to keep 24H TX real-time
+  const txTracker = useRef({ lastSeenBlock: 0, txDelta: 0, lastBlockscoutValue: 0 });
   // Cache slow-changing values — refresh every 60s
   const slowCache = useRef({
     totalContracts: 0,
     newAddresses24h: 0,
     newContracts24h: 0,
-    transactions24h: 0,
     lastFetch: 0,
   });
 
@@ -231,15 +177,13 @@ export function useChainData(pollInterval = 10000) {
     // ── Slow-changing counters: refresh every 60s ──
     const now = Date.now();
     if (now - slowCache.current.lastFetch > 60000) {
-      const [tx24h, newAccounts, newContracts, contractCount] = await Promise.all([
-        fetch24hTransactions(stats),
+      const [newAccounts, newContracts, contractCount] = await Promise.all([
         fetchLatestStatValue("newAccounts"),
         fetchLatestStatValue("newContracts"),
         blockscout.countAllContracts(),
       ]);
 
       slowCache.current = {
-        transactions24h: tx24h,
         newAddresses24h: newAccounts,
         newContracts24h: newContracts,
         totalContracts: contractCount > 0 ? contractCount : slowCache.current.totalContracts,
@@ -247,29 +191,26 @@ export function useChainData(pollInterval = 10000) {
       };
     }
 
-    // Baseline 24H TX from Blockscout (updates every 60s via slow cache)
-    const baseline = slowCache.current.transactions24h > 0
-      ? slowCache.current.transactions24h
-      : (stats?.transactions_today ? parseInt(stats.transactions_today) : 0);
+    // 24H TX: use Blockscout stats.transactions_today (fetched every 10s poll)
+    // + count TX from new blocks between Blockscout updates for real-time feel
+    const blockscoutTx24h = stats?.transactions_today ? parseInt(stats.transactions_today) : 0;
 
-    // Track new TX from blocks arriving since we got the baseline
-    // This makes the counter tick up in real-time as new blocks come in
-    if (baseline !== txTracker.current.baseline) {
-      // Baseline updated (new slow cache fetch) — reset incremental counter
-      txTracker.current = { lastSeenBlock: bn, txSinceBaseline: 0, baseline };
+    if (blockscoutTx24h !== txTracker.current.lastBlockscoutValue && blockscoutTx24h > 0) {
+      // Blockscout updated — use its value, reset delta
+      txTracker.current = { lastSeenBlock: bn, txDelta: 0, lastBlockscoutValue: blockscoutTx24h };
     } else if (bn > txTracker.current.lastSeenBlock && bks.length > 0) {
-      // Count TX in blocks we haven't seen yet
+      // New blocks arrived but Blockscout hasn't updated yet — count TX ourselves
       for (const b of bks) {
         const blockNum = hex(b.number);
         if (blockNum > txTracker.current.lastSeenBlock) {
           const txCount = Array.isArray(b.transactions) ? b.transactions.length : 0;
-          txTracker.current.txSinceBaseline += txCount;
+          txTracker.current.txDelta += txCount;
         }
       }
       txTracker.current.lastSeenBlock = bn;
     }
 
-    const transactionsToday = baseline + txTracker.current.txSinceBaseline;
+    const transactionsToday = (blockscoutTx24h > 0 ? blockscoutTx24h : 0) + txTracker.current.txDelta;
 
     setData({
       blockNumber: bn,
