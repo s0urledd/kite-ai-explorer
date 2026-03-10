@@ -18,23 +18,30 @@ export default function DashboardPage() {
 
   const txChart = useChartData(data.blockNumber, txRange, data.avgBlockTime);
   const gasChart = useChartData(data.blockNumber, gasRange, data.avgBlockTime);
+  // Always fetch 24H chart for peak TPS calculation
+  const tx24hChart = useChartData(data.blockNumber, "24H", data.avgBlockTime);
+
+  // Peak TPS (24H): highest hourly TX count / 3600
+  const peakTps24h = tx24hChart.txData.length > 0
+    ? Math.max(...tx24hChart.txData.map((p) => p.v)) / 3600
+    : data.peakTps;
 
   return (
     <div>
       <SearchBar />
-      <StatStrip data={data} />
+      <StatStrip data={data} peakTps24h={peakTps24h} />
 
       <div className="max-w-[1280px] mx-auto px-6 py-4 flex flex-col gap-3.5">
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-          <TxChart data={txChart.txData} loading={txChart.loading} onRangeChange={setTxRange} />
-          <GasChart data={gasChart.gasData} loading={gasChart.loading} onRangeChange={setGasRange} />
-        </div>
-
         {/* Latest Blocks & Transactions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
           <LatestBlocks blocks={data.blocks} />
           <LatestTransactions blocks={data.blocks} />
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+          <TxChart data={txChart.txData} loading={txChart.loading} onRangeChange={setTxRange} />
+          <GasChart data={gasChart.gasData} loading={gasChart.loading} onRangeChange={setGasRange} />
         </div>
 
         {/* Active Contracts */}

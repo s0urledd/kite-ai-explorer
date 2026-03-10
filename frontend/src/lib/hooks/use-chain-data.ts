@@ -200,22 +200,12 @@ export function useChainData(pollInterval = 10000) {
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // TPS: instantaneous rate from recent blocks
+    // TPS: instantaneous rate from recent blocks (fallback only)
     const totalTimeSpan =
       bks.length >= 2
         ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
         : 0;
-    const tps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
-
-    // Peak TPS: highest per-block rate
-    let peakTps = 0;
-    for (let i = 0; i < bks.length - 1; i++) {
-      const blockTime = hex(bks[i].timestamp) - hex(bks[i + 1].timestamp);
-      if (blockTime <= 0) continue;
-      const blockTx = ((bks[i].transactions as RpcTransaction[])?.length || 0);
-      const blockTps = blockTx / blockTime;
-      if (blockTps > peakTps) peakTps = blockTps;
-    }
+    const instantTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
 
     // Total TXN: prefer Blockscout stats
     let totalTx: number;
@@ -261,8 +251,10 @@ export function useChainData(pollInterval = 10000) {
         ? stats.average_block_time / 1000
         : (localAvgBt > 0 ? localAvgBt : 2),
       utilization: stats ? stats.network_utilization_percentage : util,
-      tps,
-      peakTps,
+      // TPS: prefer 24H average (stable), fallback to instantaneous
+      tps: transactionsToday > 0 ? transactionsToday / 86400 : instantTps,
+      // Peak TPS: computed from 24H chart data in dashboard component
+      peakTps: instantTps,
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
       transactionsToday,
