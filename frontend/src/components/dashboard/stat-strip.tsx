@@ -7,6 +7,7 @@ import { type ReactNode } from "react";
 
 interface StatStripProps {
   data: ChainData;
+  peakTps24h?: number;
 }
 
 interface MetricCell {
@@ -50,7 +51,7 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-export function StatStrip({ data }: StatStripProps) {
+export function StatStrip({ data, peakTps24h }: StatStripProps) {
   const price = useKitePrice();
   const priceNum = parseFloat(price.priceUsd);
   const change = price.priceChange24h;
@@ -83,8 +84,8 @@ export function StatStrip({ data }: StatStripProps) {
               ? data.transactionsToday.toLocaleString()
               : "\u2014",
         },
-        { label: "TPS", value: data.tps.toFixed(2) },
-        { label: "Peak TPS", align: "right" as const, value: data.peakTps.toFixed(2) },
+        { label: "Avg TPS (24H)", value: data.tps.toFixed(2) },
+        { label: "Peak TPS (24H)", align: "right" as const, value: (peakTps24h ?? data.peakTps).toFixed(2) },
       ],
     },
     // ── Card 2: Block & Gas ──
