@@ -12,24 +12,25 @@ interface ChartPoint {
   v: number;
 }
 
-const SAMPLES_PER_WINDOW = 3;
-
 function getRangeConfig() {
   return {
     "24H": {
       windows: 24,
       secondsPerWindow: 3600, // 1 hour
       label: { hour: "2-digit", minute: "2-digit" } as Intl.DateTimeFormatOptions,
+      rpcSamplesPerWindow: 3,
     },
     "1W": {
       windows: 14,
       secondsPerWindow: 43200, // 12 hours
       label: { month: "short", day: "numeric" } as Intl.DateTimeFormatOptions,
+      rpcSamplesPerWindow: 1, // Only for gas fallback, 1 sample is enough
     },
     "1M": {
       windows: 30,
       secondsPerWindow: 86400, // 1 day
       label: { month: "short", day: "numeric" } as Intl.DateTimeFormatOptions,
+      rpcSamplesPerWindow: 1,
     },
   };
 }
@@ -63,28 +64,17 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
         Math.max(1, Math.floor(latestBlock / blocksPerWindow))
       );
 
-      // Try to get TX chart data from aggregated sources
-      let txChartData: ChartPoint[] | null = null;
-      if (range === "24H") {
-        // 24H: Use Blockscout paginated blocks for accurate hourly data
-        txChartData = await loadBlockscout24hData(actualWindows, config.secondsPerWindow, config.label);
-      } else {
-        // 1W/1M: Stats microservice (most accurate, daily aggregation)
-        txChartData = await loadStatsMicroserviceTxData(range);
-        // Fallback: Blockscout backend /stats/charts/transactions
-        if (!txChartData) {
-          txChartData = await loadBlockscoutTxData(range);
-        }
-      }
-
-      // Always load gas data from RPC sampling (no other source provides gas charts)
-      // Also load tx data from RPC as ultimate fallback
-      const rpcData = await loadRpcSampledData(
+      // Load TX data and gas (RPC) data in PARALLEL
+      const txDataPromise = loadTxChartData(range, actualWindows, config.secondsPerWindow, config.label);
+      const rpcDataPromise = loadRpcSampledData(
         latestBlock,
         actualWindows,
         blocksPerWindow,
         config.label,
+        config.rpcSamplesPerWindow,
       );
+
+      const [txChartData, rpcData] = await Promise.all([txDataPromise, rpcDataPromise]);
 
       // Use aggregated data only if it has actual non-zero values
       const hasRealData = txChartData &&
@@ -107,6 +97,24 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
 }
 
 /**
+ * Unified TX chart data loader — picks the best source for the given range.
+ */
+async function loadTxChartData(
+  range: TimeRange,
+  windows: number,
+  secondsPerWindow: number,
+  labelFmt: Intl.DateTimeFormatOptions,
+): Promise<ChartPoint[] | null> {
+  if (range === "24H") {
+    return loadBlockscout24hData(windows, secondsPerWindow, labelFmt);
+  }
+  // 1W/1M: Stats microservice first, then Blockscout charts fallback
+  const statsData = await loadStatsMicroserviceTxData(range);
+  if (statsData) return statsData;
+  return loadBlockscoutTxData(range);
+}
+
+/**
  * Try stats microservice /api/v1/lines/newTxns for tx chart data.
  * The stats service has its own database with pre-aggregated daily data.
  */
@@ -120,7 +128,8 @@ async function loadStatsMicroserviceTxData(range: TimeRange): Promise<ChartPoint
     const chart = data?.chart;
     if (!Array.isArray(chart) || chart.length === 0) return null;
 
-    const days = range === "1W" ? 7 : 30;
+    // Add 1 extra day margin so today's partial data is included
+    const days = (range === "1W" ? 7 : 30) + 1;
     const now = new Date();
     const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
@@ -153,7 +162,7 @@ async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | nu
     const chartData = await blockscout.getTransactionCharts();
     if (!chartData?.chart_data?.length) return null;
 
-    const days = range === "1W" ? 7 : 30;
+    const days = (range === "1W" ? 7 : 30) + 1;
     const now = new Date();
     const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
@@ -194,7 +203,8 @@ async function loadBlockscout24hData(
     const allBlocks: BsBlock[] = [];
     let params: Record<string, string> = {};
 
-    for (let page = 0; page < 30; page++) {
+    // Limit to 15 pages (~750 blocks) — enough for most young chains
+    for (let page = 0; page < 15; page++) {
       const res = await fetch(
         `${blockscoutApiUrl()}/blocks?${new URLSearchParams({ type: "block", ...params })}`,
         { cache: "no-store" },
@@ -204,18 +214,17 @@ async function loadBlockscout24hData(
       const items: BsBlock[] = data.items || [];
       if (items.length === 0) break;
 
+      let reachedCutoff = false;
       for (const block of items) {
         const ts = Math.floor(new Date(block.timestamp).getTime() / 1000);
         if (ts < cutoff) {
-          // We've gone past 24H, stop
+          reachedCutoff = true;
           break;
         }
         allBlocks.push(block);
       }
 
-      // Check if we've reached past cutoff
-      const lastTs = Math.floor(new Date(items[items.length - 1].timestamp).getTime() / 1000);
-      if (lastTs < cutoff) break;
+      if (reachedCutoff) break;
 
       // Next page
       if (!data.next_page_params) break;
@@ -268,16 +277,17 @@ async function loadRpcSampledData(
   windows: number,
   blocksPerWindow: number,
   labelFmt: Intl.DateTimeFormatOptions,
+  samplesPerWindow: number = 3,
 ): Promise<{ tx: ChartPoint[]; gas: ChartPoint[] }> {
-  // Build sample list: for each window, pick SAMPLES_PER_WINDOW evenly spaced blocks
+  // Build sample list: for each window, pick samplesPerWindow evenly spaced blocks
   const samples: { window: number; blockNum: number }[] = [];
 
   for (let w = 0; w < windows; w++) {
     const windowStart = latestBlock - (windows - w) * blocksPerWindow;
     if (windowStart < 0) continue;
 
-    const step = Math.max(1, Math.floor(blocksPerWindow / SAMPLES_PER_WINDOW));
-    for (let s = 0; s < SAMPLES_PER_WINDOW; s++) {
+    const step = Math.max(1, Math.floor(blocksPerWindow / samplesPerWindow));
+    for (let s = 0; s < samplesPerWindow; s++) {
       const num = windowStart + s * step;
       if (num >= 0 && num <= latestBlock) {
         samples.push({ window: w, blockNum: num });
@@ -285,8 +295,8 @@ async function loadRpcSampledData(
     }
   }
 
-  // Fetch all sampled blocks in parallel (batched to avoid overwhelming RPC)
-  const BATCH_SIZE = 30;
+  // Fetch all sampled blocks in parallel (batched)
+  const BATCH_SIZE = 50;
   const results: (RpcBlock | null)[] = new Array(samples.length).fill(null);
 
   for (let i = 0; i < samples.length; i += BATCH_SIZE) {
