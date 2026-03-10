@@ -160,10 +160,13 @@ export function useChainData(pollInterval = 10000) {
     // Peak TPS: track highest instantaneous TPS seen, reset every 24H
     const now24h = Date.now();
     if (now24h - peakTpsRef.current.since > 86400_000) {
+      // 24H window expired — reset with current value
       peakTpsRef.current = { value: instantTps, since: now24h };
     } else if (instantTps > peakTpsRef.current.value) {
+      // New peak observed
       peakTpsRef.current.value = instantTps;
     }
+    // Ensure peak is never below current avg TPS (sanity floor)
 
     // Total TXN: prefer Blockscout stats
     let totalTx: number;
@@ -225,8 +228,11 @@ export function useChainData(pollInterval = 10000) {
       utilization: stats ? stats.network_utilization_percentage : util,
       // Avg TPS: 24H transaction count / seconds in a day
       tps: transactionsToday > 0 ? transactionsToday / 86400 : instantTps,
-      // Peak TPS: highest instantaneous TPS observed in the last 24H
-      peakTps: peakTpsRef.current.value,
+      // Peak TPS: highest instantaneous TPS observed, floored at avg TPS
+      peakTps: Math.max(
+        peakTpsRef.current.value,
+        transactionsToday > 0 ? transactionsToday / 86400 : instantTps,
+      ),
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
       transactionsToday,
