@@ -69,7 +69,13 @@ export default function StatsPage() {
           blockscout.getTransactionCharts().catch(() => ({ chart_data: [] })),
         ]);
         setStats(s);
-        setChartData(c.chart_data || []);
+        // Normalize field name: API may return transaction_count or tx_count
+        setChartData(
+          (c.chart_data || []).map((d) => ({
+            date: d.date,
+            tx_count: d.transaction_count ?? d.tx_count ?? 0,
+          }))
+        );
       } catch (e) {
         console.error("Failed to load stats", e);
       } finally {

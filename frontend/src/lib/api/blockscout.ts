@@ -179,8 +179,32 @@ class BlockscoutClient {
   }
 
   // --- Counters ---
-  /** Count ALL smart contracts by paginating through /smart-contracts */
-  async countAllSmartContracts(): Promise<number> {
+  /**
+   * Count ALL contract addresses (verified + unverified) by paginating
+   * through /addresses and checking is_contract.
+   * Falls back to /smart-contracts (verified only) if needed.
+   */
+  async countAllContracts(): Promise<number> {
+    try {
+      // Try counting contract addresses from /addresses endpoint
+      let total = 0;
+      let params: Record<string, string> = {};
+      for (let page = 0; page < 10; page++) {
+        const data = await this.fetch<PaginatedResponse<Address>>("/addresses", params);
+        const items = data.items || [];
+        if (items.length === 0) break;
+        total += items.filter((a) => a.is_contract).length;
+        if (!data.next_page_params) break;
+        params = { ...data.next_page_params };
+      }
+      return total;
+    } catch {
+      return 0;
+    }
+  }
+
+  /** Count verified smart contracts only */
+  async countVerifiedContracts(): Promise<number> {
     try {
       let total = 0;
       let params: Record<string, string> = { limit: "150" };

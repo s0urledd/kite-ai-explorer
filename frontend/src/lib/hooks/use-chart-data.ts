@@ -63,12 +63,15 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
         Math.max(1, Math.floor(latestBlock / blocksPerWindow))
       );
 
-      // Try to get TX chart data from multiple sources (1W/1M)
+      // Try to get TX chart data from aggregated sources
       let txChartData: ChartPoint[] | null = null;
-      if (range !== "24H") {
-        // Source 1: Stats microservice (most accurate, daily aggregation)
+      if (range === "24H") {
+        // 24H: Use Blockscout paginated blocks for accurate hourly data
+        txChartData = await loadBlockscout24hData(actualWindows, config.secondsPerWindow, config.label);
+      } else {
+        // 1W/1M: Stats microservice (most accurate, daily aggregation)
         txChartData = await loadStatsMicroserviceTxData(range);
-        // Source 2: Blockscout backend /stats/charts/transactions
+        // Fallback: Blockscout backend /stats/charts/transactions
         if (!txChartData) {
           txChartData = await loadBlockscoutTxData(range);
         }
@@ -83,7 +86,11 @@ export function useChartData(latestBlock: number, range: TimeRange, avgBlockTime
         config.label,
       );
 
-      setTxData(txChartData && txChartData.length > 2 ? txChartData : rpcData.tx);
+      // Use aggregated data only if it has actual non-zero values
+      const hasRealData = txChartData &&
+        txChartData.length > 2 &&
+        txChartData.some((p) => p.v > 0);
+      setTxData(hasRealData ? txChartData! : rpcData.tx);
       setGasData(rpcData.gas);
     } catch {
       // Keep previous data on error
@@ -161,11 +168,95 @@ async function loadBlockscoutTxData(range: TimeRange): Promise<ChartPoint[] | nu
         month: "short",
         day: "numeric",
       }),
-      v: d.tx_count,
+      v: d.transaction_count ?? d.tx_count ?? 0,
     }));
   } catch {
     return null;
   }
+}
+
+/**
+ * Load 24H chart data from Blockscout paginated /blocks endpoint.
+ * Uses actual indexed block data with tx_count — no sampling or extrapolation needed.
+ */
+async function loadBlockscout24hData(
+  windows: number,
+  secondsPerWindow: number,
+  labelFmt: Intl.DateTimeFormatOptions,
+): Promise<ChartPoint[] | null> {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const cutoff = now - windows * secondsPerWindow;
+
+    // Fetch blocks from Blockscout (paginated, newest first)
+    // Each page returns ~50 blocks with tx_count already calculated
+    type BsBlock = { height: number; timestamp: string; tx_count: number; gas_used: string; gas_limit: string };
+    const allBlocks: BsBlock[] = [];
+    let params: Record<string, string> = {};
+
+    for (let page = 0; page < 30; page++) {
+      const res = await fetch(
+        `${blockscoutApiUrl()}/blocks?${new URLSearchParams({ type: "block", ...params })}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) break;
+      const data = await res.json();
+      const items: BsBlock[] = data.items || [];
+      if (items.length === 0) break;
+
+      for (const block of items) {
+        const ts = Math.floor(new Date(block.timestamp).getTime() / 1000);
+        if (ts < cutoff) {
+          // We've gone past 24H, stop
+          break;
+        }
+        allBlocks.push(block);
+      }
+
+      // Check if we've reached past cutoff
+      const lastTs = Math.floor(new Date(items[items.length - 1].timestamp).getTime() / 1000);
+      if (lastTs < cutoff) break;
+
+      // Next page
+      if (!data.next_page_params) break;
+      params = Object.fromEntries(
+        Object.entries(data.next_page_params).map(([k, v]) => [k, String(v)])
+      );
+    }
+
+    if (allBlocks.length < 10) return null;
+
+    // Bucket blocks into hourly windows
+    const windowStart = cutoff;
+    const buckets: { txCount: number; gasUsed: number; gasLimit: number; ts: number }[] = [];
+    for (let w = 0; w < windows; w++) {
+      buckets.push({ txCount: 0, gasUsed: 0, gasLimit: 0, ts: windowStart + w * secondsPerWindow });
+    }
+
+    for (const block of allBlocks) {
+      const ts = Math.floor(new Date(block.timestamp).getTime() / 1000);
+      const windowIdx = Math.min(windows - 1, Math.floor((ts - windowStart) / secondsPerWindow));
+      if (windowIdx >= 0 && windowIdx < windows) {
+        buckets[windowIdx].txCount += block.tx_count;
+        buckets[windowIdx].gasUsed += parseInt(block.gas_used) || 0;
+        buckets[windowIdx].gasLimit += parseInt(block.gas_limit) || 0;
+      }
+    }
+
+    return buckets.map((b) => ({
+      t: new Date(b.ts * 1000).toLocaleDateString("en-US", labelFmt),
+      v: b.txCount,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+function blockscoutApiUrl(): string {
+  // Re-use the same env var
+  return (
+    process.env.NEXT_PUBLIC_BLOCKSCOUT_API_URL || "http://localhost:4000/api/v2"
+  ).replace(/\/$/, "");
 }
 
 /**

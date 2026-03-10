@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { rpc, hex, gwei, type RpcBlock, type RpcTransaction } from "@/lib/api/rpc";
 import { blockscout } from "@/lib/api/blockscout";
+import { STATS_API_URL } from "@/lib/config/chain";
 import type { ChainStats } from "@/lib/types/api";
 
 export interface ChainData {
@@ -51,11 +52,91 @@ const INITIAL: ChainData = {
   newContracts24h: 0,
 };
 
+/**
+ * Fetch the latest value from a stats-microservice line chart.
+ * Returns the most recent day's value, or 0 on failure.
+ */
+async function fetchLatestStatValue(endpoint: string): Promise<number> {
+  try {
+    const res = await fetch(`${STATS_API_URL}/api/v1/lines/${endpoint}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    const chart = data?.chart;
+    if (!Array.isArray(chart) || chart.length === 0) return 0;
+    // Last entry = most recent day
+    const last = chart[chart.length - 1];
+    return parseInt(last.value) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Get a rolling 24H transaction count from multiple sources:
+ * 1. Stats microservice daily chart (most accurate)
+ * 2. Blockscout stats.transactions_today (fallback)
+ */
+async function fetch24hTransactions(stats: ChainStats | null): Promise<number> {
+  // Source 1: Stats microservice — get last 2 days, weight by time of day for rolling 24H
+  try {
+    const res = await fetch(`${STATS_API_URL}/api/v1/lines/newTxns`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const chart = data?.chart;
+      if (Array.isArray(chart) && chart.length >= 2) {
+        // Get last 2 entries (today partial + yesterday full)
+        const sorted = chart.sort(
+          (a: { date: string }, b: { date: string }) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        const today = sorted[sorted.length - 1];
+        const yesterday = sorted[sorted.length - 2];
+        const todayVal = parseInt(today.value) || 0;
+        const yesterdayVal = parseInt(yesterday.value) || 0;
+
+        // Calculate how far through today we are (UTC)
+        const now = new Date();
+        const hoursPassed = now.getUTCHours() + now.getUTCMinutes() / 60;
+        const hoursRemaining = 24 - hoursPassed;
+
+        // Rolling 24H ≈ today's partial count + proportional amount from yesterday
+        if (hoursPassed > 0) {
+          const rolling24h = todayVal + Math.round(yesterdayVal * (hoursRemaining / 24));
+          if (rolling24h > 0) return rolling24h;
+        }
+
+        // Fallback: just use yesterday's full count
+        if (yesterdayVal > 0) return yesterdayVal;
+      }
+    }
+  } catch {
+    // Fall through to next source
+  }
+
+  // Source 2: Blockscout stats.transactions_today
+  if (stats?.transactions_today) {
+    const val = parseInt(stats.transactions_today);
+    if (val > 0) return val;
+  }
+
+  return 0;
+}
+
 export function useChainData(pollInterval = 10000) {
   const [data, setData] = useState<ChainData>(INITIAL);
   const addrs = useRef(new Set<string>());
-  // Cache total contracts count — refresh every 60s, not every 10s
-  const contractCountCache = useRef({ value: 0, lastFetch: 0 });
+  // Cache slow-changing values — refresh every 60s
+  const slowCache = useRef({
+    totalContracts: 0,
+    newAddresses24h: 0,
+    newContracts24h: 0,
+    transactions24h: 0,
+    lastFetch: 0,
+  });
 
   const load = useCallback(async () => {
     // Fetch RPC data and Blockscout stats in parallel
@@ -67,18 +148,18 @@ export function useChainData(pollInterval = 10000) {
     const bn = hex(bnH);
     const gp = gwei(gpH);
 
+    // Fetch recent blocks for TPS, gas, active contracts, and display
+    const RECENT_BLOCKS = 8;
     const promises: Promise<RpcBlock | null>[] = [];
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < RECENT_BLOCKS; i++) {
       promises.push(rpc<RpcBlock>("eth_getBlockByNumber", ["0x" + (bn - i).toString(16), true]));
     }
     const bks = (await Promise.all(promises)).filter(Boolean) as RpcBlock[];
 
     let tot = 0;
-    let contractCreations = 0;
     const contractMap: Record<string, { address: string; count: number; users: Set<string> }> = {};
     const txH: { t: string; v: number }[] = [];
     const gasH: { t: string; v: number }[] = [];
-    const sampleAddrs = new Set<string>();
 
     bks.forEach((b) => {
       const txs = (b.transactions || []) as RpcTransaction[];
@@ -95,17 +176,9 @@ export function useChainData(pollInterval = 10000) {
 
       txs.forEach((tx) => {
         addrs.current.add(tx.from);
-        sampleAddrs.add(tx.from);
         if (tx.to) {
           addrs.current.add(tx.to);
-          sampleAddrs.add(tx.to);
         }
-
-        // Contract creation: tx.to is null
-        if (!tx.to) {
-          contractCreations++;
-        }
-
         if (tx.to && tx.input?.length > 10) {
           if (!contractMap[tx.to]) contractMap[tx.to] = { address: tx.to, count: 0, users: new Set() };
           contractMap[tx.to].count++;
@@ -119,37 +192,22 @@ export function useChainData(pollInterval = 10000) {
       .slice(0, 10)
       .map((c) => ({ address: c.address, calls: c.count, callers: c.users.size }));
 
-    const avgBt =
+    // Block time from Blockscout (most accurate), fallback to local sample
+    const localAvgBt =
       bks.length >= 2
         ? (hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)) / (bks.length - 1)
         : 0;
 
     const util = bks[0] ? (hex(bks[0].gasUsed) / hex(bks[0].gasLimit)) * 100 : 0;
 
-    // ── Estimate transactions today (UTC) ──
-    // Blockscout's transactions_today actually shows YESTERDAY's count (Historian design).
-    // We calculate a live estimate: blocks since midnight UTC × avg tx/block from our sample.
-    const avgTxPerBlock = bks.length > 0 ? tot / bks.length : 0;
-    const latestTs = bks[0] ? hex(bks[0].timestamp) : 0;
-    const midnightUtc = latestTs > 0
-      ? Math.floor(new Date(latestTs * 1000).setUTCHours(0, 0, 0, 0) / 1000)
-      : 0;
-    const secondsSinceMidnight = latestTs > 0 ? latestTs - midnightUtc : 0;
-    const blockTimeSec = avgBt > 0 ? avgBt : 2;
-    const blocksSinceMidnight = Math.floor(secondsSinceMidnight / blockTimeSec);
-    const liveTransactionsToday = Math.round(blocksSinceMidnight * avgTxPerBlock);
-
-    // TPS: use live estimate for a stable 24h average
+    // TPS: instantaneous rate from recent blocks
     const totalTimeSpan =
       bks.length >= 2
         ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
         : 0;
-    const sampleTps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
-    const avgTps = liveTransactionsToday > 0 && secondsSinceMidnight > 3600
-      ? liveTransactionsToday / secondsSinceMidnight
-      : sampleTps;
+    const tps = totalTimeSpan > 0 ? tot / totalTimeSpan : 0;
 
-    // Peak TPS: use per-block peak (highest tx count / block time for that block)
+    // Peak TPS: highest per-block rate
     let peakTps = 0;
     for (let i = 0; i < bks.length - 1; i++) {
       const blockTime = hex(bks[i].timestamp) - hex(bks[i + 1].timestamp);
@@ -159,7 +217,7 @@ export function useChainData(pollInterval = 10000) {
       if (blockTps > peakTps) peakTps = blockTps;
     }
 
-    // Total TXN: prefer Blockscout stats; fallback estimates from block number & avg tx/block
+    // Total TXN: prefer Blockscout stats
     let totalTx: number;
     if (stats?.total_transactions) {
       totalTx = parseInt(stats.total_transactions);
@@ -168,58 +226,52 @@ export function useChainData(pollInterval = 10000) {
       totalTx = Math.round(avgTxPerBlock * bn);
     }
 
-    // ── Extrapolate 24H metrics from our 25-block sample ──
-    // Sample duration in seconds
-    const sampleDuration =
-      bks.length >= 2
-        ? hex(bks[0].timestamp) - hex(bks[bks.length - 1].timestamp)
-        : 0;
-    const DAY_SECONDS = 86400;
-    const scaleFactor = sampleDuration > 0 ? DAY_SECONDS / sampleDuration : 0;
-
-    // New wallets (24H): unique addresses in sample × scale factor
-    // This is an estimate — unique addresses seen in our block window, projected to 24H
-    const newAddresses24h = scaleFactor > 0
-      ? Math.round(sampleAddrs.size * scaleFactor)
-      : 0;
-
-    // New contracts (24H): contract creation txns in sample × scale factor
-    const newContracts24h = scaleFactor > 0
-      ? Math.round(contractCreations * scaleFactor)
-      : contractCreations;
-
-    // ── Total contracts: fetch from Blockscout (cached, refresh every 60s) ──
+    // ── Slow-changing counters: refresh every 60s ──
     const now = Date.now();
-    if (now - contractCountCache.current.lastFetch > 60000) {
-      const count = await blockscout.countAllSmartContracts();
-      if (count > 0) {
-        contractCountCache.current = { value: count, lastFetch: now };
-      }
+    if (now - slowCache.current.lastFetch > 60000) {
+      const [tx24h, newAccounts, newContracts, contractCount] = await Promise.all([
+        fetch24hTransactions(stats),
+        fetchLatestStatValue("newAccounts"),
+        fetchLatestStatValue("newContracts"),
+        blockscout.countAllContracts(),
+      ]);
+
+      slowCache.current = {
+        transactions24h: tx24h,
+        newAddresses24h: newAccounts,
+        newContracts24h: newContracts,
+        totalContracts: contractCount > 0 ? contractCount : slowCache.current.totalContracts,
+        lastFetch: now,
+      };
     }
-    const totalContracts = contractCountCache.current.value;
+
+    // If slow cache still has 0 for 24h TX, use Blockscout stats directly
+    const transactionsToday = slowCache.current.transactions24h > 0
+      ? slowCache.current.transactions24h
+      : (stats?.transactions_today ? parseInt(stats.transactions_today) : 0);
 
     setData({
       blockNumber: bn,
       gasPrice: gp,
-      blocks: bks.slice(0, 8),
+      blocks: bks,
       txHistory: txH,
       gasHistory: gasH,
       totalTx,
       avgBlockTime: (stats?.average_block_time && stats.average_block_time > 0)
         ? stats.average_block_time / 1000
-        : (avgBt > 0 ? avgBt : 2),
+        : (localAvgBt > 0 ? localAvgBt : 2),
       utilization: stats ? stats.network_utilization_percentage : util,
-      tps: avgTps,
+      tps,
       peakTps,
       contracts,
       addressCount: stats ? parseInt(stats.total_addresses || "0") : addrs.current.size,
-      transactionsToday: liveTransactionsToday,
+      transactionsToday,
       gasUsedToday: stats ? parseInt(stats.gas_used_today || "0") : 0,
       totalBlocks: stats ? parseInt(stats.total_blocks || "0") : bn,
       chainStats: stats,
-      totalContracts,
-      newAddresses24h,
-      newContracts24h,
+      totalContracts: slowCache.current.totalContracts,
+      newAddresses24h: slowCache.current.newAddresses24h,
+      newContracts24h: slowCache.current.newContracts24h,
     });
   }, []);
 
