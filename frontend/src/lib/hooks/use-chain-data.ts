@@ -131,6 +131,8 @@ export function useChainData(pollInterval = 10000) {
   const addrs = useRef(new Set<string>());
   // Track peak TPS over 24H — only goes up, resets after 24H
   const peakTpsRef = useRef({ value: 0, since: Date.now() });
+  // Track new TX since last Blockscout baseline to keep 24H TX real-time
+  const txTracker = useRef({ lastSeenBlock: 0, txSinceBaseline: 0, baseline: 0 });
   // Cache slow-changing values — refresh every 60s
   const slowCache = useRef({
     totalContracts: 0,
@@ -245,10 +247,29 @@ export function useChainData(pollInterval = 10000) {
       };
     }
 
-    // If slow cache still has 0 for 24h TX, use Blockscout stats directly
-    const transactionsToday = slowCache.current.transactions24h > 0
+    // Baseline 24H TX from Blockscout (updates every 60s via slow cache)
+    const baseline = slowCache.current.transactions24h > 0
       ? slowCache.current.transactions24h
       : (stats?.transactions_today ? parseInt(stats.transactions_today) : 0);
+
+    // Track new TX from blocks arriving since we got the baseline
+    // This makes the counter tick up in real-time as new blocks come in
+    if (baseline !== txTracker.current.baseline) {
+      // Baseline updated (new slow cache fetch) — reset incremental counter
+      txTracker.current = { lastSeenBlock: bn, txSinceBaseline: 0, baseline };
+    } else if (bn > txTracker.current.lastSeenBlock && bks.length > 0) {
+      // Count TX in blocks we haven't seen yet
+      for (const b of bks) {
+        const blockNum = hex(b.number);
+        if (blockNum > txTracker.current.lastSeenBlock) {
+          const txCount = Array.isArray(b.transactions) ? b.transactions.length : 0;
+          txTracker.current.txSinceBaseline += txCount;
+        }
+      }
+      txTracker.current.lastSeenBlock = bn;
+    }
+
+    const transactionsToday = baseline + txTracker.current.txSinceBaseline;
 
     setData({
       blockNumber: bn,
