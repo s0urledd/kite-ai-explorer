@@ -203,8 +203,8 @@ async function loadBlockscout24hData(
     const allBlocks: BsBlock[] = [];
     let params: Record<string, string> = {};
 
-    // Limit to 15 pages (~750 blocks) — enough for most young chains
-    for (let page = 0; page < 15; page++) {
+    // KiteAI block time ~99s → ~873 blocks/24H → ~18 pages needed
+    for (let page = 0; page < 20; page++) {
       const res = await fetch(
         `${blockscoutApiUrl()}/blocks?${new URLSearchParams({ type: "block", ...params })}`,
         { cache: "no-store" },
