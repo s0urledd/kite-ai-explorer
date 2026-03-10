@@ -175,13 +175,13 @@ export function StatStrip({ data, peakTps24h }: StatStripProps) {
       ),
       metrics: [
         {
-          label: "Total Wallets",
+          label: "Total Addresses",
           value: <AnimatedNumber value={data.addressCount} />,
         },
         {
-          label: "New Wallets (24H)",
+          label: "New Addresses (24H)",
           align: "right" as const,
-          value: `~${data.newAddresses24h.toLocaleString()}`,
+          value: data.newAddresses24h > 0 ? data.newAddresses24h.toLocaleString() : "\u2014",
         },
         {
           label: "Total Contracts",
