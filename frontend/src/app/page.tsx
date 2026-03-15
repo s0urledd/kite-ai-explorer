@@ -1,6 +1,7 @@
 "use client";
 
 import { useChainData } from "@/lib/hooks/use-chain-data";
+import { useBlockscoutStats } from "@/lib/hooks/use-blockscout-stats";
 import { SearchBar } from "@/components/layout/search-bar";
 import { StatStrip } from "@/components/dashboard/stat-strip";
 import { LatestBlocks } from "@/components/dashboard/latest-blocks";
@@ -11,11 +12,12 @@ import { ActiveContracts } from "@/components/dashboard/active-contracts";
 
 export default function DashboardPage() {
   const data = useChainData();
+  const { stats: blockscoutStats } = useBlockscoutStats();
 
   return (
     <div>
       <SearchBar />
-      <StatStrip data={data} />
+      <StatStrip data={data} blockscoutStats={blockscoutStats} />
 
       <div className="max-w-[1280px] mx-auto px-6 py-4 flex flex-col gap-3.5">
         {/* Charts Row - instant data overview */}
